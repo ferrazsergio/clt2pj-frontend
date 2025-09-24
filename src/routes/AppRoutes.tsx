@@ -3,8 +3,8 @@ import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import SimulacaoPage from "../pages/SimulacaoPage";
-import DashboardPage from "../pages/DashboardPage";
 import OAuth2Callback from "../pages/OAuth2Callback";
+import HistoricoSimulacoes from "../pages/HistoricoSimulacoes";
 
 export default function AppRoutes() {
     return (
@@ -13,10 +13,8 @@ export default function AppRoutes() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<RegisterPage />} />
             <Route path="/simulacao" element={<SimulacaoPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-
-            {/* Rota para o callback de sucesso do OAuth2 */}
             <Route path="/auth/oauth2/sucesso" element={<OAuth2Callback />} />
+            <Route path="/historico" element={<HistoricoSimulacoes />} />
         </Routes>
     );
 }

@@ -1,5 +1,7 @@
 import type {SimulacaoResponseDTO} from "../types/SimulacaoResponseDTO";
 import { Paper, Typography, Box, Divider } from "@mui/material";
+import SimulacaoGrafico from "./SimulacaoGrafico";
+import SimulacaoExportar from "./SimulacaoExportar";
 
 function formatReal(valor: number) {
     return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -33,6 +35,8 @@ export default function SimulacaoResultado({ result }: { result: SimulacaoRespon
             <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 14 }}>
         {JSON.stringify(result.comparativoDetalhado, null, 2)}
       </pre>
+            <SimulacaoGrafico result={result} />
+            <SimulacaoExportar result={result} />
         </Paper>
     );
 }

@@ -6,3 +6,7 @@ export async function simularApi(dto: SimulacaoRequestDTO): Promise<SimulacaoRes
     const res = await api.post("/simulacao", dto);
     return res.data;
 }
+export async function buscarHistoricoApi(): Promise<SimulacaoResponseDTO[]> {
+    const res = await api.get("/simulacao/historico");
+    return res.data;
+}

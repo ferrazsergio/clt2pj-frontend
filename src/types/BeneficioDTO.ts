@@ -1,5 +1,5 @@
 export interface BeneficioDTO {
     nome: string;
     descricao?: string;
-    valor: number;
+    valor: number | string;
 }
