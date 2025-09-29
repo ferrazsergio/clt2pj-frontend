@@ -1,20 +1,58 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { oauth2Sucesso } from "../api/oauth2";
-import { useAuth } from "../context/AuthContext";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { Box, Paper, Typography, CircularProgress } from "@mui/material";
 
 export default function OAuth2Callback() {
-    const { loginOAuth2 } = useAuth();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const { loginOAuth2 } = useAuth();
 
     useEffect(() => {
-        const processOAuth2 = async () => {
-            const token = await oauth2Sucesso();
-            loginOAuth2(token); // Certifique-se que loginOAuth2 aceita argumento
-            navigate("/dashboard");
-        };
-        processOAuth2();
-    }, [loginOAuth2, navigate]);
+        const token = searchParams.get("token");
+        const usuario = searchParams.get("usuario");
+        const provider = searchParams.get("provider");
 
-    return <div>Autenticando via Google/GitHub...</div>;
+        if (token && usuario && provider) {
+            // Use setTimeout para garantir atualização do contexto antes de navegar
+            loginOAuth2({ token, usuario, provider });
+            setTimeout(() => navigate("/dashboard"), 300); // pequeno delay para garantir reatividade
+        } else {
+            console.error("Token ou usuário não encontrado nos parâmetros");
+            navigate("/login");
+        }
+    }, [searchParams, navigate, loginOAuth2]);
+
+    return (
+        <Box
+            sx={{
+                minHeight: "100vh",
+                width: "100vw",
+                bgcolor: "background.default",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+            }}
+        >
+            <Paper
+                elevation={3}
+                sx={{
+                    p: 4,
+                    borderRadius: 4,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 2,
+                }}
+            >
+                <CircularProgress size={48} color="primary" />
+                <Typography variant="h6" mt={2}>
+                    Autenticando...
+                </Typography>
+                <Typography color="text.secondary">
+                    Aguarde, estamos conectando sua conta.
+                </Typography>
+            </Paper>
+        </Box>
+    );
 }

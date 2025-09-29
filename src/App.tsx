@@ -2,16 +2,19 @@ import { BrowserRouter } from "react-router-dom";
 import { ThemeProvider, CssBaseline, Container } from "@mui/material";
 import theme from "./theme";
 import AppRoutes from "./routes/AppRoutes";
+import { AuthProvider } from "./context/auth-provider.tsx"; // ajuste o caminho se necessário
 
 function App() {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <BrowserRouter>
-                <Container maxWidth="md">
-                    <AppRoutes />
-                </Container>
-            </BrowserRouter>
+            <AuthProvider>
+                <BrowserRouter>
+                    <Container maxWidth="md">
+                        <AppRoutes />
+                    </Container>
+                </BrowserRouter>
+            </AuthProvider>
         </ThemeProvider>
     );
 }

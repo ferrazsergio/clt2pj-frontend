@@ -11,7 +11,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
 export default function RegisterPage() {

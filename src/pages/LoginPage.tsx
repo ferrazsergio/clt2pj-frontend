@@ -6,14 +6,12 @@ import {
     Box,
     Paper,
     Stack,
-    Divider,
-    IconButton,
-    InputAdornment
+    Divider
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import GoogleIcon from "@mui/icons-material/Google";
 import GitHubIcon from "@mui/icons-material/GitHub";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth"; // Corrigido para importar do novo hook
 import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
@@ -23,7 +21,7 @@ export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    // URLs do backend para autenticação social (ajuste conforme seu backend)
+    // URLs do backend para autenticação social
     const oauthGoogleUrl = "http://localhost:8080/oauth2/authorization/google";
     const oauthGithubUrl = "http://localhost:8080/oauth2/authorization/github";
 

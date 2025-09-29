@@ -3,11 +3,11 @@ import { Paper, Typography, Box, Divider, List, ListItem, ListItemText, Button, 
 import type { SimulacaoResponseDTO } from "../types/SimulacaoResponseDTO";
 import { buscarHistoricoApi } from "../api/simulacao";
 import SimulacaoResultado from "../components/SimulacaoResultado";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
 export default function HistoricoSimulacoes() {
-    const { user } = useAuth();
+    const { user, token } = useAuth(); // <-- ADICIONAR token
     const navigate = useNavigate();
 
     const [historico, setHistorico] = useState<SimulacaoResponseDTO[]>([]);
@@ -15,14 +15,14 @@ export default function HistoricoSimulacoes() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) {
+        if (!user || !token) {
             navigate("/login");
             return;
         }
-        buscarHistoricoApi()
+        buscarHistoricoApi(user.email, token) // <-- PASSAR email e token
             .then(setHistorico)
             .finally(() => setLoading(false));
-    }, [user, navigate]);
+    }, [user, token, navigate]);
 
     return (
         <Box

@@ -146,7 +146,7 @@ export default function BeneficioSelector({
                                     startAdornment: <InputAdornment position="start">R$</InputAdornment>,
                                     inputMode: "decimal"
                                 }}
-                                placeholder="R$ 0,00"
+                                placeholder="0,00"
                             />
                             <IconButton onClick={() => setBeneficios(beneficios.filter(x => x.nome !== b.nome))}>
                                 <DeleteIcon />
@@ -201,7 +201,7 @@ export default function BeneficioSelector({
                                     minWidth: 100,
                                     flex: 1
                                 }}
-                                placeholder="R$ 0,00"
+                                placeholder="0,00"
                             />
                             <Button
                                 variant="contained"
@@ -250,7 +250,7 @@ export default function BeneficioSelector({
                                     maxWidth: 130,
                                     minWidth: 100
                                 }}
-                                placeholder="R$ 0,00"
+                                placeholder="0,00"
                             />
                             <IconButton onClick={() => setBeneficios(beneficios.filter(x => x.nome !== b.nome))}>
                                 <DeleteIcon />

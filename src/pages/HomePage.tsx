@@ -1,7 +1,7 @@
 import { Box, Typography, Button, Paper, Divider, Stack } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { Google as GoogleIcon, GitHub as GitHubIcon } from "@mui/icons-material";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 export default function HomePage() {
     const navigate = useNavigate();

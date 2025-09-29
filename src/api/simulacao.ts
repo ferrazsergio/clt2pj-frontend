@@ -6,7 +6,13 @@ export async function simularApi(dto: SimulacaoRequestDTO): Promise<SimulacaoRes
     const res = await api.post("/simulacao", dto);
     return res.data;
 }
-export async function buscarHistoricoApi(): Promise<SimulacaoResponseDTO[]> {
-    const res = await api.get("/simulacao/historico");
+// Envia o usuário por query param e token no header
+export async function buscarHistoricoApi(usuario: string, token: string): Promise<SimulacaoResponseDTO[]> {
+    const res = await api.get(`/simulacao/historico?usuario=${encodeURIComponent(usuario)}`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
     return res.data;
 }
+
