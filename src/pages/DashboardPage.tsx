@@ -14,23 +14,37 @@ import {
     Avatar,
     CircularProgress,
     Container,
+    Chip,
+    Zoom,
+    Badge,
+    Fade,
+    useTheme,
+    Grid // ✅ Grid normal
 } from "@mui/material";
+
 import LogoutIcon from "@mui/icons-material/Logout";
 import SimCardIcon from "@mui/icons-material/SimCard";
 import HistoryIcon from "@mui/icons-material/History";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import SavingsIcon from "@mui/icons-material/Savings";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import InfoIcon from "@mui/icons-material/Info";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useNavigate } from "react-router-dom";
 import { buscarHistoricoApi } from "../api/simulacao";
 import type { Usuario } from "../types/Usuario";
 import type { SimulacaoResponseDTO } from "../types/SimulacaoResponseDTO";
+import SimulacaoComparativoDetalhado from "../components/SimulacaoComparativoDetalhado";
 
 export default function DashboardPage() {
     const { user, token, logout } = useAuth() as { user: Usuario | null, token: string | null, logout: () => void };
     const navigate = useNavigate();
+    const theme = useTheme();
 
     const [historico, setHistorico] = useState<SimulacaoResponseDTO[]>([]);
     const [carregando, setCarregando] = useState(true);
 
-    // Novo handler de logout!
     const handleLogout = () => {
         logout();
         navigate("/");
@@ -52,45 +66,6 @@ export default function DashboardPage() {
         buscarHistorico();
     }, [user, token]);
 
-    let conteudoHistorico;
-    if (carregando) {
-        conteudoHistorico = (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight={80}>
-                <CircularProgress size={32} />
-            </Box>
-        );
-    } else if (Array.isArray(historico) && historico.length === 0) {
-        conteudoHistorico = (
-            <Typography color="text.secondary" fontSize={15} mb={1}>
-                Nenhuma simulação recente encontrada.
-            </Typography>
-        );
-    } else if (Array.isArray(historico)) {
-        conteudoHistorico = historico.slice(0, 5).map((simulacao, idx) => (
-            <Paper key={idx}
-                   elevation={0}
-                   sx={{ mb: 2, p: 2, bgcolor: "#f5f8fa", borderRadius: 2 }}>
-                <Typography fontWeight={600} fontSize={16}>
-                    Simulação #{idx + 1}
-                </Typography>
-                <Typography fontSize={15}>
-                    <b>CLT Líquido:</b> R$ {simulacao.salarioLiquidoClt?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} &nbsp; | <b>PJ Líquido:</b> R$ {simulacao.salarioLiquidoPj?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </Typography>
-                <Typography fontSize={14} color="text.secondary">
-                    Provisão Benefícios: <b>R$ {simulacao.provisaoBeneficios?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</b>
-                </Typography>
-                <Typography fontSize={13} color="text.secondary">
-                    Reserva Sugerida: <b>R$ {simulacao.valorReservaSugerido?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</b>
-                </Typography>
-                {simulacao.comparativoDetalhado && (
-                    <Typography fontSize={12} color="text.disabled">
-                        Detalhes: {JSON.stringify(simulacao.comparativoDetalhado)}
-                    </Typography>
-                )}
-            </Paper>
-        ));
-    }
-
     return (
         <Box
             sx={{
@@ -103,7 +78,7 @@ export default function DashboardPage() {
             }}
         >
             <Container maxWidth="md">
-                <AppBar position="static" color="primary" elevation={2}>
+                <AppBar position="static" color="primary" elevation={2} sx={{ borderRadius: 3 }}>
                     <Toolbar>
                         <Avatar sx={{ bgcolor: "secondary.main", mr: 2 }}>
                             {user?.email?.[0]?.toUpperCase() || "U"}
@@ -111,38 +86,45 @@ export default function DashboardPage() {
                         <Typography variant="h6" sx={{ flex: 1 }}>
                             Dashboard
                         </Typography>
-                        <Tooltip title="Sair">
-                            {/* Alterado para handleLogout */}
-                            <IconButton color="inherit" onClick={handleLogout}>
+                        <Tooltip title="Sair da conta" arrow>
+                            <IconButton color="inherit" onClick={handleLogout} aria-label="Sair do sistema">
                                 <LogoutIcon />
                             </IconButton>
                         </Tooltip>
                     </Toolbar>
                 </AppBar>
-                <Box sx={{
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 3,
-                    mt: 4
-                }}>
-                    {/* Card de boas-vindas */}
-                    <Paper elevation={3} sx={{ p: 3, borderRadius: 4 }}>
-                        <Typography variant="h5" fontWeight={700} gutterBottom>
-                            Olá, {user?.email || "Usuário"}!
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Bem-vindo ao seu painel. Veja suas simulações, acesse funcionalidades e muito mais!
-                        </Typography>
+
+                <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, mt: 4 }}>
+                    <Paper elevation={3} sx={{ p: 3, borderRadius: 4, position: "relative", overflow: "hidden" }}>
+                        <Fade in>
+                            <Box>
+                                <Typography variant="h5" fontWeight={700} gutterBottom>
+                                    Olá, {user?.email || "Usuário"}!
+                                </Typography>
+                                <Typography variant="body1" color="text.secondary">
+                                    Bem-vindo ao seu painel. Veja suas simulações, acesse funcionalidades e muito mais!
+                                </Typography>
+                                <Box sx={{ position: "absolute", right: 16, top: 16 }}>
+                                    <Tooltip title="Conta Premium" arrow>
+                                        <WorkspacePremiumIcon color="primary" fontSize="large" />
+                                    </Tooltip>
+                                </Box>
+                            </Box>
+                        </Fade>
                     </Paper>
-                    {/* Atalhos/ações */}
+
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                         <Button
                             variant="contained"
                             color="primary"
                             startIcon={<SimCardIcon />}
                             onClick={() => navigate("/simulacao")}
-                            sx={{ fontWeight: 600, flex: 1 }}
+                            sx={{
+                                fontWeight: 600,
+                                flex: 1,
+                                transition: "background 0.18s, box-shadow 0.18s",
+                                "&:hover": { boxShadow: 4, bgcolor: "primary.dark" }
+                            }}
                         >
                             Nova Simulação
                         </Button>
@@ -151,18 +133,120 @@ export default function DashboardPage() {
                             color="primary"
                             startIcon={<HistoryIcon />}
                             onClick={() => navigate("/historico")}
-                            sx={{ fontWeight: 600, flex: 1 }}
+                            sx={{
+                                fontWeight: 600,
+                                flex: 1,
+                                transition: "border 0.18s",
+                                "&:hover": { borderWidth: 2 }
+                            }}
                         >
                             Histórico
                         </Button>
                     </Stack>
-                    {/* Histórico de simulações */}
+
                     <Paper elevation={1} sx={{ p: 2, borderRadius: 3 }}>
-                        <Typography variant="h6" mb={2} fontWeight={600}>
-                            Últimas Simulações
-                        </Typography>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                            <Typography variant="h6" fontWeight={600}>
+                                Últimas Simulações
+                            </Typography>
+                            <Tooltip title="Ver como gráfico" arrow>
+                                <IconButton size="small" color="primary" onClick={() => navigate("/historico")}>
+                                    <BarChartIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </Stack>
                         <Divider sx={{ mb: 2 }} />
-                        {conteudoHistorico}
+
+                        {carregando ? (
+                            <Stack alignItems="center" gap={2}>
+                                <CircularProgress size={32} color="primary" />
+                                <Typography color="text.secondary" fontWeight={500}>
+                                    Carregando suas simulações...
+                                </Typography>
+                            </Stack>
+                        ) : Array.isArray(historico) && historico.length === 0 ? (
+                            <Typography color="text.secondary" fontSize={15} mb={1}>
+                                Nenhuma simulação recente encontrada.
+                            </Typography>
+                        ) : (
+                            <Grid container spacing={2}>
+                                {historico.slice(0, 5).map((simulacao, idx) => (
+                                    <Zoom in key={idx}>
+                                        <Grid size={{ xs: 12, md: 6 }} sx={{ position: "relative" }}>
+                                            <Paper
+                                                elevation={2}
+                                                sx={{
+                                                    p: 2,
+                                                    borderRadius: 3,
+                                                    bgcolor: theme.palette.mode === "dark" ? "grey.900" : "#f5f8fa",
+                                                    height: "100%",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    gap: 1,
+                                                    position: "relative",
+                                                    transition: "box-shadow 0.2s, transform 0.2s",
+                                                    "&:hover": {
+                                                        boxShadow: 6,
+                                                        transform: "scale(1.03)",
+                                                        borderColor: "primary.main"
+                                                    }
+                                                }}
+                                            >
+                                                {idx === 0 && (
+                                                    <Badge
+                                                        badgeContent="Mais Recente"
+                                                        color="secondary"
+                                                        sx={{ position: "absolute", top: 14, right: 14, zIndex: 1 }}
+                                                    />
+                                                )}
+                                                <Stack direction="row" alignItems="center" spacing={1}>
+                                                    <Chip
+                                                        label={`#${idx + 1}`}
+                                                        size="small"
+                                                        color="primary"
+                                                        icon={<TrendingUpIcon fontSize="small" />}
+                                                    />
+                                                    <Tooltip title="Salário Líquido CLT/PJ" arrow>
+                                                        <Typography fontWeight={600} fontSize={16}>
+                                                            CLT: {"salarioLiquidoCltBR" in simulacao
+                                                            ? simulacao.salarioLiquidoCltBR
+                                                            : `R$${simulacao.salarioLiquidoClt?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+                                                            &nbsp;| PJ: {"salarioLiquidoPjBR" in simulacao
+                                                            ? simulacao.salarioLiquidoPjBR
+                                                            : `R$${simulacao.salarioLiquidoPj?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+                                                        </Typography>
+                                                    </Tooltip>
+                                                </Stack>
+                                                <Typography fontSize={14} color="text.secondary" display="flex" alignItems="center" gap={1}>
+                                                    <SavingsIcon fontSize="small" color="action" /> Provisão Benefícios: <b>
+                                                    {"provisaoBeneficiosBR" in simulacao
+                                                        ? simulacao.provisaoBeneficiosBR
+                                                        : `R$${simulacao.provisaoBeneficios?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+                                                </b>
+                                                </Typography>
+                                                <Typography fontSize={13} color="text.secondary" display="flex" alignItems="center" gap={1}>
+                                                    <InfoIcon fontSize="small" color="action" /> Reserva Sugerida: <b>
+                                                    {"valorReservaSugeridoBR" in simulacao
+                                                        ? simulacao.valorReservaSugeridoBR
+                                                        : `R$${simulacao.valorReservaSugerido?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+                                                </b>
+                                                </Typography>
+                                                <Typography fontSize={13} color="text.secondary" display="flex" alignItems="center" gap={1}>
+                                                    <CalendarMonthIcon fontSize="small" color="action" /> {simulacao.comparativoDetalhado?.data ? `Data: ${simulacao.comparativoDetalhado.data}` : ""}
+                                                </Typography>
+                                                {simulacao.comparativoDetalhado && (
+                                                    <Fade in>
+                                                        <Box mt={1}>
+                                                            <SimulacaoComparativoDetalhado detalhado={simulacao.comparativoDetalhado} />
+                                                        </Box>
+                                                    </Fade>
+                                                )}
+                                            </Paper>
+                                        </Grid>
+                                    </Zoom>
+                                ))}
+                            </Grid>
+                        )}
                     </Paper>
                 </Box>
             </Container>

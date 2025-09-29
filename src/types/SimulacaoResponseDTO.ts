@@ -4,4 +4,9 @@ export interface SimulacaoResponseDTO {
     provisaoBeneficios: number;
     valorReservaSugerido: number;
     comparativoDetalhado: Record<string, any>;
+
+    salarioLiquidoCltBR?: string;
+    salarioLiquidoPjBR?: string;
+    provisaoBeneficiosBR?: string;
+    valorReservaSugeridoBR?: string;
 }

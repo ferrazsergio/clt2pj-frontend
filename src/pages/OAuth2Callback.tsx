@@ -8,20 +8,19 @@ export default function OAuth2Callback() {
     const navigate = useNavigate();
     const { loginOAuth2 } = useAuth();
 
-    useEffect(() => {
-        const token = searchParams.get("token");
-        const usuario = searchParams.get("usuario");
-        const provider = searchParams.get("provider");
+    const token = searchParams.get("token");
+    const usuario = searchParams.get("usuario");
+    const provider = searchParams.get("provider");
 
+    useEffect(() => {
         if (token && usuario && provider) {
-            // Use setTimeout para garantir atualização do contexto antes de navegar
             loginOAuth2({ token, usuario, provider });
-            setTimeout(() => navigate("/dashboard"), 300); // pequeno delay para garantir reatividade
+            setTimeout(() => navigate("/dashboard"), 300);
         } else {
             console.error("Token ou usuário não encontrado nos parâmetros");
             navigate("/login");
         }
-    }, [searchParams, navigate, loginOAuth2]);
+    }, []);
 
     return (
         <Box

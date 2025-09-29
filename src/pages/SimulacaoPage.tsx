@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-    Box, Paper, Typography, TextField, MenuItem, Button, Divider, InputAdornment
+    Box, Paper, Typography, TextField, MenuItem, Button, Divider, InputAdornment, Container
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import type { BeneficioDTO } from "../types/BeneficioDTO";
@@ -84,6 +84,7 @@ export default function SimulacaoPage() {
                     ...beneficiosPj.map(b => b.nome)
                 ]
             };
+
             const response = await simularApi(dto);
             setResult(response);
         } catch {
@@ -98,24 +99,12 @@ export default function SimulacaoPage() {
                 minHeight: "100vh",
                 width: "100vw",
                 bgcolor: "background.default",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
+                py: { xs: 3, md: 6 }
             }}
         >
-            <Paper sx={{
-                p: 4,
-                maxWidth: 430,
-                width: "100%",
-                borderRadius: 4,
-                boxShadow: "0 4px 24px rgba(33,150,243,0.08)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                position: "relative"
-            }}>
+            <Container maxWidth="lg">
                 {/* Botão Voltar */}
-                <Box sx={{ position: "absolute", left: 24, top: 24 }}>
+                <Box sx={{ mb: 3 }}>
                     <Button
                         startIcon={<ArrowBackIcon />}
                         variant="text"
@@ -126,79 +115,101 @@ export default function SimulacaoPage() {
                         Voltar
                     </Button>
                 </Box>
-                <Typography variant="h5" gutterBottom align="center" sx={{ mt: 2 }}>
-                    Simulação CLT vs PJ
-                </Typography>
-                <Divider sx={{ mb: 2, width: "100%" }} />
-                <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2} width="100%">
-                    <TextField
-                        label="Salário CLT bruto *"
-                        helperText="Informe o valor bruto, antes dos descontos de impostos e INSS."
-                        type="text"
-                        value={salarioClt}
-                        onChange={handleSalarioCltChange}
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                            inputMode: "numeric"
-                        }}
-                        placeholder="0,00"
-                        required
-                        size="small"
-                    />
-                    <BeneficioSelector
-                        beneficios={beneficiosClt}
-                        setBeneficios={setBeneficiosClt}
-                        label="Benefícios CLT"
-                    />
-                    <TextField
-                        label="Salário PJ *"
-                        type="text"
-                        value={salarioPj}
-                        onChange={handleSalarioPjChange}
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                            inputMode: "numeric"
-                        }}
-                        placeholder="0,00"
-                        required
-                        size="small"
-                    />
-                    <TextField
-                        select
-                        label="Tipo de Tributação PJ *"
-                        value={tipoTributacao}
-                        onChange={e => setTipoTributacao(e.target.value)}
-                        required
-                        size="small"
-                    >
-                        {tipoTributacaoOptions.map(opt => (
-                            <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                        ))}
-                    </TextField>
-                    <BeneficioSelector
-                        beneficios={beneficiosPj}
-                        setBeneficios={setBeneficiosPj}
-                        label="Benefícios PJ"
-                    />
-                    <TextField
-                        label="Reserva de Emergência (%)"
-                        type="number"
-                        value={reservaEmergencia}
-                        onChange={e => setReservaEmergencia(Number(e.target.value))}
-                        inputProps={{ min: 0 }}
-                        size="small"
-                    />
-                    <Button type="submit" variant="contained" color="primary" size="large" fullWidth disabled={loading}>
-                        {loading ? "Calculando..." : "Simular"}
-                    </Button>
-                    {error && <Typography color="error">{error}</Typography>}
-                </Box>
+
+                {/* Card do Formulário */}
+                <Paper sx={{
+                    p: { xs: 3, md: 4 },
+                    maxWidth: 600,
+                    mx: "auto",
+                    borderRadius: 3,
+                    boxShadow: "0 4px 24px rgba(33,150,243,0.08)",
+                    mb: 4
+                }}>
+                    <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 600 }}>
+                        Simulação CLT vs PJ
+                    </Typography>
+                    <Divider sx={{ mb: 3 }} />
+
+                    <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={2.5}>
+                        <TextField
+                            label="Salário CLT bruto *"
+                            helperText="Informe o valor bruto, antes dos descontos de impostos e INSS."
+                            type="text"
+                            value={salarioClt}
+                            onChange={handleSalarioCltChange}
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                                inputMode: "numeric"
+                            }}
+                            placeholder="0,00"
+                            required
+                            size="small"
+                        />
+                        <BeneficioSelector
+                            beneficios={beneficiosClt}
+                            setBeneficios={setBeneficiosClt}
+                            label="Benefícios CLT"
+                        />
+                        <TextField
+                            label="Salário PJ *"
+                            type="text"
+                            value={salarioPj}
+                            onChange={handleSalarioPjChange}
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                                inputMode: "numeric"
+                            }}
+                            placeholder="0,00"
+                            required
+                            size="small"
+                        />
+                        <TextField
+                            select
+                            label="Tipo de Tributação PJ *"
+                            value={tipoTributacao}
+                            onChange={e => setTipoTributacao(e.target.value)}
+                            required
+                            size="small"
+                        >
+                            {tipoTributacaoOptions.map(opt => (
+                                <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                            ))}
+                        </TextField>
+                        <BeneficioSelector
+                            beneficios={beneficiosPj}
+                            setBeneficios={setBeneficiosPj}
+                            label="Benefícios PJ"
+                        />
+                        <TextField
+                            label="Reserva de Emergência (%)"
+                            type="number"
+                            value={reservaEmergencia}
+                            onChange={e => setReservaEmergencia(Number(e.target.value))}
+                            inputProps={{ min: 0 }}
+                            size="small"
+                        />
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="primary"
+                            size="large"
+                            fullWidth
+                            disabled={loading}
+                            sx={{ mt: 1 }}
+                        >
+                            {loading ? "Calculando..." : "Simular"}
+                        </Button>
+                        {error && <Typography color="error" align="center">{error}</Typography>}
+                    </Box>
+                </Paper>
+
+                {/* Resultado - Agora com mais espaço */}
                 {result && (
-                    <Box mt={4} width="100%">
+                    <Box sx={{ maxWidth: 900, mx: "auto" }}>
                         <SimulacaoResultado result={result} />
                     </Box>
                 )}
-            </Paper>
+            </Container>
         </Box>
     );
 }
