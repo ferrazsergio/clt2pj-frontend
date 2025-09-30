@@ -11,7 +11,7 @@ export interface BeneficiosDetalhado {
     salarioLiquido?: number;
     tipoTributacao?: string;
     reservaEmergencia?: number;
-    totalBeneficios?: number;
+    totalBeneficios?: number; // <-- usar este campo
     beneficiosSelecionados?: string[];
   };
   valorReservaSugerido?: number;
@@ -24,10 +24,8 @@ export interface SimulacaoResponseDTO {
   provisaoBeneficios: number;
   valorReservaSugerido: number;
 
-  // Agora tipado corretamente 👇
   comparativoDetalhado: Record<string, BeneficiosDetalhado>;
 
-  // Versões formatadas em BRL (opcionais)
   salarioLiquidoCltBR?: string;
   salarioLiquidoPjBR?: string;
   provisaoBeneficiosBR?: string;

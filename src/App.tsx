@@ -3,6 +3,7 @@ import { ThemeProvider, CssBaseline, Container } from "@mui/material";
 import theme from "./theme";
 import AppRoutes from "./routes/AppRoutes";
 import { AuthProvider } from "./context/auth-provider.tsx"; // ajuste o caminho se necessário
+import './styles/autofill-fix.css';
 
 function App() {
     return (

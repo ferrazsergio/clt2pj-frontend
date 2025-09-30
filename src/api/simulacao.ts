@@ -6,13 +6,30 @@ export async function simularApi(dto: SimulacaoRequestDTO): Promise<SimulacaoRes
     const res = await api.post("/simulacao", dto);
     return res.data;
 }
-// Envia o usuário por query param e token no header
-export async function buscarHistoricoApi(usuario: string, token: string): Promise<SimulacaoResponseDTO[]> {
-    const res = await api.get(`/simulacao/historico?usuario=${encodeURIComponent(usuario)}`, {
+
+export async function salvarSimulacaoApi(simulacaoData: any, token: string): Promise<any> {
+    console.log("📝 Salvando simulação:", simulacaoData);
+    const res = await api.post("/simulacao/salvar", simulacaoData, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
     });
     return res.data;
+}
+export async function buscarHistoricoApi(usuarioId: string, token: string): Promise<SimulacaoResponseDTO[]> {
+    // Validação robusta do usuarioId
+    if (!usuarioId || usuarioId.trim() === '' || usuarioId === 'undefined') {
+        return [];
+    }
+    try {
+        const res = await api.get(`/simulacao/historico/${encodeURIComponent(usuarioId)}`);
+        return res.data;
+    } catch (error: any) {
+        
+        if (error.response) {
+        }
+        
+        return [];
+    }
 }
 

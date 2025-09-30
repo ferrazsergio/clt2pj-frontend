@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Paper,
@@ -13,40 +13,92 @@ import {
     CircularProgress,
     Fade,
     Zoom,
+    Slide,
     Tooltip,
     styled,
+    alpha,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ReplayIcon from "@mui/icons-material/Replay";
+import CalculateIcon from "@mui/icons-material/Calculate";
+import SaveIcon from "@mui/icons-material/Save";
 import type { BeneficioDTO } from "../types/BeneficioDTO";
 import type { SimulacaoRequestDTO } from "../types/SimulacaoRequestDTO";
-import { simularApi } from "../api/simulacao";
+import { simularApi, salvarSimulacaoApi } from "../api/simulacao";
 import SimulacaoResultado from "../components/SimulacaoResultado.tsx";
 import type { SimulacaoResponseDTO } from "../types/SimulacaoResponseDTO.ts";
 import BeneficioSelector from "../components/BeneficioSelector";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
-// Autofill fix: fundo branco, texto preto, radius Apple-like
-const StyledTextField = styled(TextField)(({ theme }) => ({
-    "& input, & .MuiInputBase-input": {
-        background: "#fff !important",
-        WebkitBoxShadow: "0 0 0 100px #fff inset !important",
-        boxShadow: "0 0 0 100px #fff inset !important",
-        WebkitTextFillColor: "#1d1d1f !important",
-        color: "#1d1d1f",
+// Apple-style TextField com transições suaves
+const AppleTextField = styled(TextField)(({ theme }) => ({
+    "& .MuiOutlinedInput-root": {
         borderRadius: 12,
-        fontFamily: "'SF Pro Display', 'Inter', 'Roboto', 'Arial', sans-serif"
+        backgroundColor: "#ffffff",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        "&:hover": {
+            backgroundColor: "#fafafa",
+            "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: alpha(theme.palette.primary.main, 0.3),
+            },
+        },
+        "&.Mui-focused": {
+            backgroundColor: "#ffffff",
+            boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`,
+            "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.primary.main,
+                borderWidth: 2,
+            },
+        },
     },
-    "&:-webkit-autofill": {
+    "& .MuiOutlinedInput-notchedOutline": {
+        borderColor: "#d2d2d7",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    },
+    "& input": {
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif",
+        fontSize: "1rem",
+        fontWeight: 400,
+        color: "#1d1d1f",
         background: "#fff !important",
         WebkitBoxShadow: "0 0 0 100px #fff inset !important",
+        WebkitTextFillColor: "#1d1d1f !important",
+    },
+    "& .MuiInputLabel-root": {
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif",
+        fontWeight: 500,
+    },
+    // Fix fundo preto do autofill (extra para garantir)
+    "& input:-webkit-autofill, & input:-webkit-autofill:focus, & input:-webkit-autofill:hover": {
+        WebkitBoxShadow: "0 0 0 100px #fff inset !important",
         boxShadow: "0 0 0 100px #fff inset !important",
+        background: "#fff !important",
         WebkitTextFillColor: "#1d1d1f !important",
         color: "#1d1d1f !important",
-        borderRadius: 12,
+        borderRadius: "12px !important",
+        transition: "background 0.18s",
     },
-    background: "#fff",
+}));
+
+// Botão Apple-style
+const AppleButton = styled(Button)(({ theme }) => ({
     borderRadius: 12,
+    padding: "12px 24px",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif",
+    fontSize: "1rem",
+    fontWeight: 600,
+    textTransform: "none",
+    boxShadow: "none",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    "&:hover": {
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+        transform: "translateY(-1px)",
+    },
+    "&:active": {
+        transform: "translateY(0)",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
+    },
 }));
 
 function toCentavos(valor: string) {
@@ -79,6 +131,8 @@ function isMoedaValid(valor: string) {
 
 export default function SimulacaoPage() {
     const navigate = useNavigate();
+    const { user, token } = useAuth();
+    const [mounted, setMounted] = useState(false);
 
     const [salarioClt, setSalarioClt] = useState<string>("");
     const [beneficiosClt, setBeneficiosClt] = useState<BeneficioDTO[]>([]);
@@ -88,8 +142,14 @@ export default function SimulacaoPage() {
     const [reservaEmergencia, setReservaEmergencia] = useState<number>(10);
     const [result, setResult] = useState<SimulacaoResponseDTO | null>(null);
     const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [apiError, setApiError] = useState<string | null>(null);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleBack = () => {
         if (window.history.length > 2) {
@@ -109,6 +169,7 @@ export default function SimulacaoPage() {
         setResult(null);
         setError("");
         setApiError(null);
+        setSaveSuccess(false);
     };
 
     const isFormValid =
@@ -131,6 +192,7 @@ export default function SimulacaoPage() {
         setLoading(true);
         setError("");
         setApiError(null);
+        setSaveSuccess(false);
         try {
             if (!isFormValid) {
                 setError("Preencha todos os campos corretamente.");
@@ -165,315 +227,480 @@ export default function SimulacaoPage() {
                 throw new Error("Resposta inválida do servidor.");
             }
             setResult(response);
-        } catch (err: any) {
-            setApiError(err?.message || "Erro ao realizar simulação.");
+        } catch (err: unknown) {
+            const error = err as { message?: string };
+            setApiError(error?.message || "Erro ao realizar simulação.");
         }
         setLoading(false);
     };
 
+    // FUNÇÃO PARA SALVAR SIMULAÇÃO
+    const handleSalvarSimulacao = async () => {
+        if (!result || !user || !token) {
+            setApiError("Não é possível salvar: usuário não autenticado.");
+            return;
+        }
+
+        setSaving(true);
+        setApiError(null);
+        try {
+             const simulacaoParaSalvar = {
+                usuario: { 
+                    id: user.id,
+                    email: user.email,
+                    papeis: user.papeis
+                    // Inclua todas as propriedades que a entidade Usuario precisa
+                },
+                salarioClt: result.salarioLiquidoClt,
+                salarioPj: result.salarioLiquidoPj,
+                beneficios: JSON.stringify({
+                    clt: beneficiosClt,
+                    pj: beneficiosPj,
+                    tipoTributacao: tipoTributacao,
+                    reservaEmergencia: reservaEmergencia
+                }),
+                resultadoComparativo: `CLT: ${result.salarioLiquidoClt} | PJ: ${result.salarioLiquidoPj} | Vantagem: ${result.salarioLiquidoPj > result.salarioLiquidoClt ? 'PJ' : 'CLT'}`,
+                dataCriacao: new Date().toISOString()
+            };
+
+            console.log("📝 Salvando simulação:", simulacaoParaSalvar);
+            
+            await salvarSimulacaoApi(simulacaoParaSalvar, token);
+            
+            setSaveSuccess(true);
+            setApiError(null);
+            
+            // Auto-hide success message after 3 seconds
+            setTimeout(() => setSaveSuccess(false), 3000);
+            
+        } catch (error: any) {
+            console.error("❌ Erro ao salvar simulação:", error);
+            setApiError("Erro ao salvar simulação: " + (error.message || "Tente novamente"));
+            setSaveSuccess(false);
+        } finally {
+            setSaving(false);
+        }
+    };
+console.log("🔐 DEBUG - SimulacaoPage - User atual:", user);
+console.log("🔐 DEBUG - SimulacaoPage - User ID:", user?.id);
     return (
-        <Box
-            sx={{
-                minHeight: "100vh",
-                width: "100vw",
-                bgcolor: "background.default",
-                py: { xs: 3, md: 6 },
-                transition: "background 0.25s"
-            }}
-        >
-            <Container maxWidth="lg">
-                {/* Botões topo com microinteração */}
-                <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                    <Fade in>
-                        <Tooltip title="Voltar" arrow>
-                            <span>
-                                <Button
-                                    startIcon={<ArrowBackIcon />}
-                                    variant="outlined"
-                                    color="primary"
-                                    onClick={handleBack}
-                                    sx={{
-                                        fontWeight: 600,
-                                        textTransform: "none",
-                                        mr: 2,
-                                        borderRadius: 3,
-                                        background: "#fff",
-                                        border: "1.5px solid #e3e8ee",
-                                        boxShadow: "none",
-                                        color: "primary.main",
-                                        transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
-                                        "&:hover": {
-                                            background: "#f5f5f7",
-                                            borderColor: "#b0b8c9",
-                                            color: "primary.main",
-                                            boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                            transform: "scale(1.01)",
-                                        },
-                                    }}
-                                    disabled={loading}
-                                >
-                                    Voltar
-                                </Button>
-                            </span>
-                        </Tooltip>
-                    </Fade>
-                    {result && (
-                        <Fade in>
-                            <Tooltip title="Nova Simulação" arrow>
+        <>
+            <style>
+            {`
+              input:-webkit-autofill,
+              input:-webkit-autofill:focus,
+              input:-webkit-autofill:hover,
+              textarea:-webkit-autofill,
+              textarea:-webkit-autofill:focus,
+              textarea:-webkit-autofill:hover,
+              select:-webkit-autofill,
+              select:-webkit-autofill:focus,
+              select:-webkit-autofill:hover {
+                -webkit-box-shadow: 0 0 0 100px #fff inset !important;
+                box-shadow: 0 0 0 100px #fff inset !important;
+                background: #fff !important;
+                -webkit-text-fill-color: #1d1d1f !important;
+                color: #1d1d1f !important;
+                border-radius: 12px !important;
+                transition: background 0.18s;
+              }
+            `}
+            </style>
+            <Box
+                sx={{
+                    minHeight: "100vh",
+                    width: "100vw",
+                    bgcolor: "#fafafa",
+                    py: { xs: 3, md: 6 },
+                }}
+            >
+                <Container maxWidth="lg">
+                    {/* Header com botões */}
+                    <Slide direction="down" in={mounted} timeout={500}>
+                        <Box sx={{ 
+                            display: "flex", 
+                            alignItems: "center", 
+                            gap: 2,
+                            mb: 4 
+                        }}>
+                            <Tooltip title="Voltar" arrow placement="bottom">
                                 <span>
-                                    <Button
-                                        startIcon={<ReplayIcon />}
+                                    <AppleButton
+                                        startIcon={<ArrowBackIcon />}
                                         variant="outlined"
-                                        color="primary"
-                                        onClick={handleReset}
+                                        onClick={handleBack}
+                                        disabled={loading}
                                         sx={{
-                                            fontWeight: 600,
-                                            textTransform: "none",
-                                            borderRadius: 3,
-                                            background: "#fff",
-                                            border: "1.5px solid #e3e8ee",
-                                            boxShadow: "none",
-                                            color: "primary.main",
-                                            transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
+                                            borderColor: "#d2d2d7",
+                                            color: "#1d1d1f",
                                             "&:hover": {
-                                                background: "#f5f5f7",
-                                                borderColor: "#b0b8c9",
-                                                color: "primary.main",
-                                                boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                                transform: "scale(1.01)",
+                                                borderColor: "#86868b",
+                                                backgroundColor: "rgba(0, 0, 0, 0.04)",
                                             },
                                         }}
-                                        disabled={loading}
                                     >
-                                        Recomeçar
-                                    </Button>
+                                        Voltar
+                                    </AppleButton>
                                 </span>
                             </Tooltip>
-                        </Fade>
-                    )}
-                </Box>
+                            {result && (
+                                <Fade in={!!result} timeout={300}>
+                                    <Tooltip title="Recomeçar simulação" arrow placement="bottom">
+                                        <span>
+                                            <AppleButton
+                                                startIcon={<ReplayIcon />}
+                                                variant="outlined"
+                                                onClick={handleReset}
+                                                disabled={loading || saving}
+                                                sx={{
+                                                    borderColor: "#d2d2d7",
+                                                    color: "#1d1d1f",
+                                                    "&:hover": {
+                                                        borderColor: "#86868b",
+                                                        backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                                    },
+                                                }}
+                                            >
+                                                Recomeçar
+                                            </AppleButton>
+                                        </span>
+                                    </Tooltip>
+                                </Fade>
+                            )}
+                        </Box>
+                    </Slide>
 
-                <Zoom in>
-                    <Paper sx={{
-                        p: { xs: 3, md: 4 },
-                        maxWidth: 600,
-                        mx: "auto",
-                        borderRadius: 5,
-                        boxShadow: "0 1.5px 16px rgba(0,0,0,0.06)",
-                        border: "1.2px solid #e3e8ee",
-                        mb: 4,
-                        background: "#fff",
-                        transition: "box-shadow 0.14s, border 0.13s",
-                        "&:hover": {
-                            boxShadow: "0 3px 28px rgba(0,0,0,0.11)",
-                            border: "1.7px solid #b0b8c9",
-                        },
-                    }}>
-                        <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 700, color: "primary.main" }}>
-                            Simulação CLT vs PJ
-                        </Typography>
-                        <Divider sx={{ mb: 3, background: "#e3e8ee" }} />
-
-                        <Box
-                            component="form"
-                            onSubmit={handleSubmit}
-                            display="flex"
-                            flexDirection="column"
-                            gap={2.5}
-                            sx={{ position: "relative" }}
-                            autoComplete="off"
+                    {/* Card principal do formulário */}
+                    <Zoom in={mounted} timeout={600}>
+                        <Paper 
+                            elevation={0}
+                            sx={{
+                                p: { xs: 3, md: 5 },
+                                maxWidth: 680,
+                                mx: "auto",
+                                borderRadius: 4,
+                                border: "1px solid #e5e5e7",
+                                mb: 4,
+                                backgroundColor: "#ffffff",
+                                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                "&:hover": {
+                                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.06)",
+                                    borderColor: "#d2d2d7",
+                                },
+                            }}
                         >
-                            <StyledTextField
-                                label="Salário CLT bruto *"
-                                helperText={isMoedaValid(salarioClt) ? "Informe o valor bruto, antes dos descontos de impostos e INSS." : "Digite um valor válido maior que zero."}
-                                type="text"
-                                value={salarioClt}
-                                onChange={handleSalarioCltChange}
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                                    inputMode: "numeric"
-                                }}
-                                placeholder="0,00"
-                                required
-                                size="small"
-                                autoFocus
-                                error={!isMoedaValid(salarioClt) && salarioClt.length > 0}
-                            />
-                            <BeneficioSelector
-                                beneficios={beneficiosClt}
-                                setBeneficios={setBeneficiosClt}
-                                label="Benefícios CLT"
-                            />
-
-                            {/* LINHA PONTILHADA ENTRE CLT E PJ */}
-                            <Box sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                my: 2.5,
-                                width: "100%",
-                            }}>
-                                <Box sx={{
-                                    flex: 1,
-                                    height: 1,
-                                    borderBottom: "2px dashed #e3e8ee",
-                                    mr: 1.5,
-                                }} />
-                                <Typography variant="body2" sx={{
-                                    color: "#6e6e73",
-                                    fontWeight: 500,
-                                    background: "#fff",
-                                    px: 1.2,
-                                    borderRadius: 8,
-                                    boxShadow: "0 1px 8px rgba(0,0,0,0.03)",
-                                }}>
-                                    Comparar com PJ
+                            {/* Ícone e Título */}
+                            <Box sx={{ textAlign: "center", mb: 4 }}>
+                                <Box
+                                    sx={{
+                                        width: 64,
+                                        height: 64,
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        mx: "auto",
+                                        mb: 2,
+                                        boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                                    }}
+                                >
+                                    <CalculateIcon sx={{ fontSize: 32, color: "#ffffff" }} />
+                                </Box>
+                                <Typography 
+                                    variant="h4" 
+                                    sx={{ 
+                                        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                        fontWeight: 700,
+                                        color: "#1d1d1f",
+                                        mb: 1,
+                                    }}
+                                >
+                                    Simulação CLT vs PJ
                                 </Typography>
-                                <Box sx={{
-                                    flex: 1,
-                                    height: 1,
-                                    borderBottom: "2px dashed #e3e8ee",
-                                    ml: 1.5,
-                                }} />
+                                <Typography 
+                                    variant="body1" 
+                                    sx={{ 
+                                        color: "#86868b",
+                                        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                    }}
+                                >
+                                    Compare e descubra qual regime é mais vantajoso para você
+                                </Typography>
                             </Box>
 
-                            <StyledTextField
-                                label="Salário PJ *"
-                                type="text"
-                                value={salarioPj}
-                                onChange={handleSalarioPjChange}
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                                    inputMode: "numeric"
-                                }}
-                                placeholder="0,00"
-                                required
-                                size="small"
-                                error={!isMoedaValid(salarioPj) && salarioPj.length > 0}
-                                helperText={isMoedaValid(salarioPj) ? "" : "Digite um valor válido maior que zero."}
-                            />
-                            <StyledTextField
-                                select
-                                label="Tipo de Tributação PJ *"
-                                value={tipoTributacao}
-                                onChange={e => setTipoTributacao(e.target.value)}
-                                required
-                                size="small"
-                            >
-                                {tipoTributacaoOptions.map(opt => (
-                                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                                ))}
-                            </StyledTextField>
-                            <BeneficioSelector
-                                beneficios={beneficiosPj}
-                                setBeneficios={setBeneficiosPj}
-                                label="Benefícios PJ"
-                            />
-                            <StyledTextField
-                                label="Reserva de Emergência (%)"
-                                type="number"
-                                value={reservaEmergencia}
-                                onChange={e => {
-                                    const val = Number(e.target.value);
-                                    if (val < 0 || val > 100 || isNaN(val)) {
-                                        setError("Digite um valor entre 0 e 100.");
-                                    } else {
-                                        setReservaEmergencia(val);
-                                        setError("");
-                                    }
-                                }}
-                                inputProps={{ min: 0, max: 100 }}
-                                size="small"
-                                error={reservaEmergencia < 0 || reservaEmergencia > 100}
-                                helperText={
-                                    reservaEmergencia < 0 || reservaEmergencia > 100
-                                        ? "Digite um valor entre 0 e 100."
-                                        : "Percentual sugerido de reserva."
-                                }
-                            />
-                            {/* Erros do formulário */}
-                            <Fade in={!!error}>
-                                <Box>
-                                    {error && (
-                                        <Alert severity="warning" sx={{ my: 0 }}>
-                                            {error}
-                                        </Alert>
-                                    )}
-                                </Box>
-                            </Fade>
-                            {/* Erros da API */}
-                            <Fade in={!!apiError}>
-                                <Box>
-                                    {apiError && (
-                                        <Alert severity="error" sx={{ my: 0 }}>
-                                            {apiError}
-                                        </Alert>
-                                    )}
-                                </Box>
-                            </Fade>
-                            {/* Botão com animação de loading */}
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                color="primary"
-                                size="large"
-                                fullWidth
-                                disabled={loading || !isFormValid}
+                            <Box
+                                component="form"
+                                onSubmit={handleSubmit}
                                 sx={{
-                                    mt: 1,
-                                    boxShadow: "none",
-                                    fontWeight: 700,
-                                    fontSize: "1.1rem",
-                                    borderRadius: "14px",
-                                    background: "#fff",
-                                    color: "primary.main",
-                                    border: "1.5px solid #e3e8ee",
-                                    transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
-                                    "&:hover": {
-                                        background: "#f5f5f7",
-                                        borderColor: "#b0b8c9",
-                                        color: "primary.main",
-                                        boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                        transform: "scale(1.01)",
-                                    },
-                                    "&:active": {
-                                        background: "#e8e8ed",
-                                        color: "primary.main",
-                                        borderColor: "#b0b8c9",
-                                    },
-                                    "&.Mui-disabled": {
-                                        background: "#f5f5f7",
-                                        color: "#b0b8c9",
-                                        borderColor: "#e3e8ee",
-                                        cursor: "not-allowed",
-                                    },
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 3,
                                 }}
                             >
-                                {loading ? (
-                                    <Fade in={loading}>
-                                        <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                                            <CircularProgress size={24} color="inherit" />
-                                            Calculando...
-                                        </Box>
-                                    </Fade>
-                                ) : (
-                                    "Simular"
-                                )}
-                            </Button>
-                        </Box>
-                    </Paper>
-                </Zoom>
+                                {/* Seção CLT */}
+                                <Box>
+                                    <Typography 
+                                        variant="overline" 
+                                        sx={{ 
+                                            color: "#86868b",
+                                            fontWeight: 600,
+                                            letterSpacing: 1,
+                                            display: "block",
+                                            mb: 2,
+                                        }}
+                                    >
+                                        Regime CLT
+                                    </Typography>
+                                    <AppleTextField
+                                        label="Salário Bruto"
+                                        type="text"
+                                        value={salarioClt}
+                                        onChange={handleSalarioCltChange}
+                                        InputProps={{
+                                            startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                                            inputMode: "numeric"
+                                        }}
+                                        placeholder="0,00"
+                                        required
+                                        fullWidth
+                                        autoFocus
+                                        error={!isMoedaValid(salarioClt) && salarioClt.length > 0}
+                                        helperText={
+                                            isMoedaValid(salarioClt) 
+                                                ? "Valor antes dos descontos de impostos e INSS" 
+                                                : salarioClt.length > 0 ? "Digite um valor válido maior que zero" : ""
+                                        }
+                                    />
+                                    <Box sx={{ mt: 2 }}>
+                                        <BeneficioSelector
+                                            beneficios={beneficiosClt}
+                                            setBeneficios={setBeneficiosClt}
+                                            label="Benefícios CLT"
+                                        />
+                                    </Box>
+                                </Box>
 
-                {/* Resultado com animação, espaçamento, proteção visual */}
-                {result && (
-                    <Zoom in>
-                        <Box sx={{ maxWidth: 900, mx: "auto", mb: 4 }}>
-                            {/* SimulacaoResultado: ajuste os cards para serem ultra clean, cores suaves, shadow leve, radius 20px, tipografia Apple-like */}
-                            <SimulacaoResultado result={result} />
-                        </Box>
+                                {/* Divisor elegante */}
+                                <Box sx={{ 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    gap: 2,
+                                    my: 2,
+                                }}>
+                                    <Divider sx={{ flex: 1, borderColor: "#e5e5e7" }} />
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            color: "#86868b",
+                                            fontWeight: 600,
+                                            px: 2,
+                                            py: 0.5,
+                                            borderRadius: 2,
+                                            bgcolor: "#f5f5f7",
+                                        }}
+                                    >
+                                        VS
+                                    </Typography>
+                                    <Divider sx={{ flex: 1, borderColor: "#e5e5e7" }} />
+                                </Box>
+
+                                {/* Seção PJ */}
+                                <Box>
+                                    <Typography 
+                                        variant="overline" 
+                                        sx={{ 
+                                            color: "#86868b",
+                                            fontWeight: 600,
+                                            letterSpacing: 1,
+                                            display: "block",
+                                            mb: 2,
+                                        }}
+                                    >
+                                        Regime PJ
+                                    </Typography>
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                        <AppleTextField
+                                            label="Valor do Contrato"
+                                            type="text"
+                                            value={salarioPj}
+                                            onChange={handleSalarioPjChange}
+                                            InputProps={{
+                                                startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                                                inputMode: "numeric"
+                                            }}
+                                            placeholder="0,00"
+                                            required
+                                            fullWidth
+                                            error={!isMoedaValid(salarioPj) && salarioPj.length > 0}
+                                            helperText={
+                                                !isMoedaValid(salarioPj) && salarioPj.length > 0 
+                                                    ? "Digite um valor válido maior que zero" 
+                                                    : ""
+                                            }
+                                        />
+                                        <AppleTextField
+                                            select
+                                            label="Tipo de Tributação"
+                                            value={tipoTributacao}
+                                            onChange={e => setTipoTributacao(e.target.value)}
+                                            required
+                                            fullWidth
+                                        >
+                                            {tipoTributacaoOptions.map(opt => (
+                                                <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                            ))}
+                                        </AppleTextField>
+                                        <AppleTextField
+                                            label="Reserva de Emergência"
+                                            type="number"
+                                            value={reservaEmergencia}
+                                            onChange={e => {
+                                                const val = Number(e.target.value);
+                                                if (val >= 0 && val <= 100 && !isNaN(val)) {
+                                                    setReservaEmergencia(val);
+                                                    setError("");
+                                                } else {
+                                                    setError("Digite um valor entre 0 e 100.");
+                                                }
+                                            }}
+                                            InputProps={{
+                                                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                                            }}
+                                            inputProps={{ min: 0, max: 100 }}
+                                            fullWidth
+                                            error={reservaEmergencia < 0 || reservaEmergencia > 100}
+                                            helperText={
+                                                reservaEmergencia < 0 || reservaEmergencia > 100
+                                                    ? "Digite um valor entre 0 e 100"
+                                                    : "Percentual recomendado para reserva financeira"
+                                            }
+                                        />
+                                        <BeneficioSelector
+                                            beneficios={beneficiosPj}
+                                            setBeneficios={setBeneficiosPj}
+                                            label="Benefícios PJ"
+                                        />
+                                    </Box>
+                                </Box>
+
+                                {/* Alertas de erro */}
+                                {(error || apiError) && (
+                                    <Fade in timeout={300}>
+                                        <Alert 
+                                            severity={apiError ? "error" : "warning"}
+                                            sx={{ 
+                                                borderRadius: 3,
+                                                "& .MuiAlert-icon": {
+                                                    fontSize: 24,
+                                                }
+                                            }}
+                                        >
+                                            {apiError || error}
+                                        </Alert>
+                                    </Fade>
+                                )}
+
+                                {/* Botão de submit */}
+                                <AppleButton
+                                    type="submit"
+                                    variant="contained"
+                                    size="large"
+                                    fullWidth
+                                    disabled={loading || !isFormValid}
+                                    sx={{
+                                        mt: 2,
+                                        py: 1.75,
+                                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                        color: "#ffffff",
+                                        fontSize: "1.1rem",
+                                        fontWeight: 600,
+                                        "&:hover": {
+                                            background: "linear-gradient(135deg, #5568d3 0%, #6a3f91 100%)",
+                                        },
+                                        "&.Mui-disabled": {
+                                            background: "#e5e5e7",
+                                            color: "#86868b",
+                                        },
+                                    }}
+                                >
+                                    {loading ? (
+                                        <Box display="flex" alignItems="center" gap={1.5}>
+                                            <CircularProgress size={24} sx={{ color: "#ffffff" }} />
+                                            <span>Calculando...</span>
+                                        </Box>
+                                    ) : (
+                                        "Calcular Simulação"
+                                    )}
+                                </AppleButton>
+                            </Box>
+                        </Paper>
                     </Zoom>
-                )}
-            </Container>
-        </Box>
+
+                    {/* Resultado */}
+                    {result && (
+                        <Fade in timeout={500}>
+                            <Box sx={{ maxWidth: 1000, mx: "auto" }}>
+                                {/* Botão de Salvar e Alertas */}
+                                <Box sx={{ mb: 3 }}>
+                                    {saveSuccess && (
+                                        <Fade in timeout={300}>
+                                            <Alert 
+                                                severity="success"
+                                                sx={{ 
+                                                    borderRadius: 3,
+                                                    mb: 2,
+                                                    "& .MuiAlert-icon": {
+                                                        fontSize: 24,
+                                                    }
+                                                }}
+                                            >
+                                                ✅ Simulação salva com sucesso!
+                                            </Alert>
+                                        </Fade>
+                                    )}
+                                    
+                                    <Box sx={{ display: "flex", justifyContent: "center" }}>
+                                        <Tooltip title="Salvar esta simulação no seu histórico" arrow placement="top">
+                                            <span>
+                                                <AppleButton
+                                                    variant="contained"
+                                                    startIcon={<SaveIcon />}
+                                                    onClick={handleSalvarSimulacao}
+                                                    disabled={saving || !user || !token}
+                                                    sx={{
+                                                        background: "linear-gradient(135deg, #4CAF50 0%, #45a049 100%)",
+                                                        color: "#ffffff",
+                                                        minWidth: 200,
+                                                        "&:hover": {
+                                                            background: "linear-gradient(135deg, #45a049 0%, #3d8b40 100%)",
+                                                        },
+                                                        "&.Mui-disabled": {
+                                                            background: "#e5e5e7",
+                                                            color: "#86868b",
+                                                        },
+                                                    }}
+                                                >
+                                                    {saving ? (
+                                                        <Box display="flex" alignItems="center" gap={1}>
+                                                            <CircularProgress size={20} sx={{ color: "#ffffff" }} />
+                                                            <span>Salvando...</span>
+                                                        </Box>
+                                                    ) : (
+                                                        "Salvar Simulação"
+                                                    )}
+                                                </AppleButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Box>
+                                </Box>
+                                
+                                <SimulacaoResultado result={result} />
+                            </Box>
+                        </Fade>
+                    )}
+                </Container>
+            </Box>
+        </>
     );
 }

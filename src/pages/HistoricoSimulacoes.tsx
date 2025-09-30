@@ -14,19 +14,44 @@ import {
     Stack,
     Fade,
     Zoom,
+    Slide,
     Tooltip,
     IconButton,
     Alert,
+    styled,
+    alpha,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import InfoIcon from "@mui/icons-material/Info";
+import HistoryIcon from "@mui/icons-material/History";
 import type { SimulacaoResponseDTO } from "../types/SimulacaoResponseDTO";
 import { buscarHistoricoApi } from "../api/simulacao";
 import SimulacaoResultado from "../components/SimulacaoResultado";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
+// Botão Apple-style
+const AppleButton = styled(Button)(({ theme }) => ({
+    borderRadius: 12,
+    padding: "12px 24px",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif",
+    fontSize: "1rem",
+    fontWeight: 600,
+    textTransform: "none",
+    boxShadow: "none",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    "&:hover": {
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+        transform: "translateY(-1px)",
+    },
+    "&:active": {
+        transform: "translateY(0)",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
+    },
+}));
+
 export default function HistoricoSimulacoes() {
+    const [mounted, setMounted] = useState(false);
     const { user, token } = useAuth();
     const navigate = useNavigate();
 
@@ -34,6 +59,10 @@ export default function HistoricoSimulacoes() {
     const [selecionada, setSelecionada] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [apiError, setApiError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleBack = () => {
         if (window.history.length > 2) {
@@ -44,183 +73,297 @@ export default function HistoricoSimulacoes() {
     };
 
     useEffect(() => {
-        if (!user || !token) {
-            navigate("/login");
-            return;
-        }
-        buscarHistoricoApi(user.email, token)
-            .then((data) => {
-                if (!data || !Array.isArray(data)) {
-                    setApiError("Erro ao buscar histórico. Tente novamente.");
-                    setHistorico([]);
-                } else {
-                    setHistorico(data);
-                }
-            })
-            .catch(() => setApiError("Erro ao buscar histórico. Tente novamente."))
-            .finally(() => setLoading(false));
-    }, [user, token, navigate]);
+    if (!user || !token) {
+        navigate("/login");
+        return;
+    }
+
+    
+    buscarHistoricoApi(user.email, token)
+        .then((data) => {
+            
+            if (!data || !Array.isArray(data)) {
+                setApiError("Erro ao buscar histórico. Tente novamente.");
+                setHistorico([]);
+            } else {
+                setHistorico(data);
+            }
+        })
+        .catch((error) => {
+            setApiError("Erro ao buscar histórico. Tente novamente.");
+        })
+        .finally(() => setLoading(false));
+}, [user, token, navigate]);
+
+    const formatarMoeda = (valor: number) => {
+        return valor.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+        });
+    };
 
     return (
         <Box
             sx={{
                 minHeight: "100vh",
                 width: "100vw",
-                bgcolor: "background.default",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                bgcolor: "#fafafa",
                 py: { xs: 3, md: 6 },
-                transition: "background 0.25s"
             }}
         >
-            <Container maxWidth="md">
-                <Zoom in>
-                    <Paper sx={{
-                        p: { xs: 3, md: 4 },
-                        borderRadius: 5,
-                        boxShadow: "0 1.5px 16px rgba(0,0,0,0.06)",
-                        border: "1.2px solid #e3e8ee",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        minHeight: 420,
-                        background: "#fff",
-                        transition: "box-shadow 0.14s, border 0.13s",
-                        "&:hover": {
-                            boxShadow: "0 3px 28px rgba(0,0,0,0.11)",
-                            border: "1.7px solid #b0b8c9",
-                        },
+            <Container maxWidth="lg">
+                {/* Header com botão voltar */}
+                <Slide direction="down" in={mounted} timeout={500}>
+                    <Box sx={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 2,
+                        mb: 4 
                     }}>
-                        {/* Botão voltar */}
-                        <Fade in>
-                            <Box width="100%" mb={1} display="flex" justifyContent="flex-start">
-                                <Tooltip title="Voltar para o painel" arrow>
-                                    <span>
-                                        <IconButton
-                                            color="primary"
-                                            onClick={handleBack}
-                                            sx={{
-                                                borderRadius: 3,
-                                                background: "#fff",
-                                                border: "1.5px solid #e3e8ee",
-                                                boxShadow: "none",
-                                                color: "primary.main",
-                                                transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
-                                                "&:hover": {
-                                                    background: "#f5f5f7",
-                                                    borderColor: "#b0b8c9",
-                                                    color: "primary.main",
-                                                    boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                                    transform: "scale(1.01)",
-                                                },
-                                            }}
-                                        >
-                                            <ArrowBackIcon />
-                                        </IconButton>
-                                    </span>
-                                </Tooltip>
+                        <Tooltip title="Voltar" arrow placement="bottom">
+                            <span>
+                                <AppleButton
+                                    startIcon={<ArrowBackIcon />}
+                                    variant="outlined"
+                                    onClick={handleBack}
+                                    sx={{
+                                        borderColor: "#d2d2d7",
+                                        color: "#1d1d1f",
+                                        "&:hover": {
+                                            borderColor: "#86868b",
+                                            backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                        },
+                                    }}
+                                >
+                                    Voltar
+                                </AppleButton>
+                            </span>
+                        </Tooltip>
+                    </Box>
+                </Slide>
+
+                {/* Card principal do histórico */}
+                <Zoom in={mounted} timeout={600}>
+                    <Paper 
+                        elevation={0}
+                        sx={{
+                            p: { xs: 3, md: 5 },
+                            borderRadius: 4,
+                            border: "1px solid #e5e5e7",
+                            backgroundColor: "#ffffff",
+                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                            "&:hover": {
+                                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.06)",
+                                borderColor: "#d2d2d7",
+                            },
+                        }}
+                    >
+                        {/* Ícone e Título */}
+                        <Box sx={{ textAlign: "center", mb: 4 }}>
+                            <Box
+                                sx={{
+                                    width: 64,
+                                    height: 64,
+                                    borderRadius: "50%",
+                                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    mx: "auto",
+                                    mb: 2,
+                                    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                                }}
+                            >
+                                <HistoryIcon sx={{ fontSize: 32, color: "#ffffff" }} />
                             </Box>
-                        </Fade>
+                            <Typography 
+                                variant="h4" 
+                                sx={{ 
+                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                    fontWeight: 700,
+                                    color: "#1d1d1f",
+                                    mb: 1,
+                                }}
+                            >
+                                Histórico de Simulações
+                            </Typography>
+                            <Typography 
+                                variant="body1" 
+                                sx={{ 
+                                    color: "#86868b",
+                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                }}
+                            >
+                                Revise e compare suas simulações anteriores
+                            </Typography>
+                        </Box>
 
-                        <Typography variant="h5" gutterBottom align="center" fontWeight={700} color="primary.main">
-                            Histórico de Simulações
-                        </Typography>
-                        <Divider sx={{ mb: 3, width: "100%", background: "#e3e8ee" }} />
+                        <Divider sx={{ 
+                            mb: 4, 
+                            width: "100%", 
+                            borderColor: "#e5e5e7" 
+                        }} />
 
+                        {/* Conteúdo do histórico */}
                         <Box sx={{ width: "100%" }}>
                             {loading ? (
-                                <Stack alignItems="center" py={2}>
-                                    <CircularProgress color="primary" />
-                                    <Typography mt={2} color="text.secondary">Carregando...</Typography>
+                                <Stack alignItems="center" py={4}>
+                                    <CircularProgress 
+                                        size={48}
+                                        sx={{ color: "#667eea" }} 
+                                    />
+                                    <Typography 
+                                        mt={2} 
+                                        color="#86868b"
+                                        fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
+                                    >
+                                        Carregando histórico...
+                                    </Typography>
                                 </Stack>
                             ) : apiError ? (
-                                <Fade in>
-                                    <Alert severity="error" sx={{ my: 2, width: "100%" }}>
+                                <Fade in timeout={300}>
+                                    <Alert 
+                                        severity="error"
+                                        sx={{ 
+                                            borderRadius: 3,
+                                            mb: 3,
+                                            "& .MuiAlert-icon": {
+                                                fontSize: 24,
+                                            }
+                                        }}
+                                    >
                                         {apiError}
                                     </Alert>
                                 </Fade>
                             ) : historico.length === 0 ? (
-                                <Fade in>
-                                    <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
-                                        Nenhuma simulação encontrada.
-                                    </Typography>
+                                <Fade in timeout={300}>
+                                    <Box sx={{ textAlign: "center", py: 4 }}>
+                                        <Typography 
+                                            variant="h6" 
+                                            color="#86868b"
+                                            fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
+                                            gutterBottom
+                                        >
+                                            Nenhuma simulação encontrada
+                                        </Typography>
+                                        <Typography 
+                                            variant="body2" 
+                                            color="#86868b"
+                                            fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
+                                        >
+                                            Suas simulações aparecerão aqui
+                                        </Typography>
+                                    </Box>
                                 </Fade>
                             ) : (
                                 <List sx={{ width: "100%" }}>
                                     {historico.map((sim, idx) => (
-                                        <Fade in key={idx}>
+                                        <Fade in key={idx} timeout={(idx + 1) * 200}>
                                             <ListItem
                                                 disablePadding
                                                 sx={{
-                                                    bgcolor: selecionada === idx ? "primary.light" : undefined,
-                                                    borderRadius: 3,
-                                                    mb: 1,
-                                                    transition: "background 0.14s"
+                                                    mb: 2,
                                                 }}
                                             >
                                                 <ListItemButton
-                                                    onClick={() => setSelecionada(idx)}
+                                                    onClick={() => setSelecionada(selecionada === idx ? null : idx)}
                                                     sx={{
-                                                        background: "#fff",
+                                                        p: 3,
                                                         borderRadius: 3,
-                                                        border: "1.2px solid #e3e8ee",
-                                                        boxShadow: "none",
-                                                        color: "primary.main",
-                                                        transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
+                                                        border: "1px solid #e5e5e7",
+                                                        backgroundColor: selecionada === idx ? "#f8f9ff" : "#ffffff",
+                                                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                                                         "&:hover": {
-                                                            background: "#f5f5f7",
-                                                            borderColor: "#b0b8c9",
-                                                            color: "primary.main",
-                                                            boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                                            transform: "scale(1.01)",
+                                                            backgroundColor: "#fafafa",
+                                                            borderColor: "#d2d2d7",
+                                                            transform: "translateY(-2px)",
+                                                            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
                                                         },
                                                     }}
                                                 >
                                                     <ListItemText
                                                         primary={
-                                                            <Stack direction="row" alignItems="center" gap={1}>
-                                                                <InfoIcon fontSize="small" color="action" />
-                                                                <Typography fontWeight={600}>
-                                                                    {`Simulação #${idx + 1} - CLT: ${sim.salarioLiquidoCltBR || `R$${sim.salarioLiquidoClt.toFixed(2)}`} / PJ: ${sim.salarioLiquidoPjBR || `R$${sim.salarioLiquidoPj.toFixed(2)}`}`}
+                                                            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+                                                                <InfoIcon sx={{ color: "#667eea", fontSize: 20 }} />
+                                                                <Typography 
+                                                                    variant="h6"
+                                                                    sx={{ 
+                                                                        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                                                        fontWeight: 600,
+                                                                        color: "#1d1d1f",
+                                                                    }}
+                                                                >
+                                                                    Simulação #{idx + 1}
                                                                 </Typography>
-                                                            </Stack>
+                                                            </Box>
                                                         }
                                                         secondary={
-                                                            sim.comparativoDetalhado?.data
-                                                                ? `Data: ${sim.comparativoDetalhado.data}`
-                                                                : ""
+                                                            <Box sx={{ mt: 1 }}>
+                                                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                                                    <Typography 
+                                                                        variant="body2"
+                                                                        sx={{ 
+                                                                            color: "#86868b",
+                                                                            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                                                        }}
+                                                                    >
+                                                                        <strong>CLT:</strong> {sim.salarioLiquidoCltBR || formatarMoeda(sim.salarioLiquidoClt)}
+                                                                    </Typography>
+                                                                    <Typography 
+                                                                        variant="body2"
+                                                                        sx={{ 
+                                                                            color: "#86868b",
+                                                                            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                                                        }}
+                                                                    >
+                                                                        <strong>PJ:</strong> {sim.salarioLiquidoPjBR || formatarMoeda(sim.salarioLiquidoPj)}
+                                                                    </Typography>
+                                                                </Stack>
+                                                               {sim.comparativoDetalhado && (
+                                                                    Object.keys(sim.comparativoDetalhado).map((chave) => (
+                                                                        <Typography 
+                                                                            key={chave}
+                                                                            variant="caption"
+                                                                            sx={{ 
+                                                                                color: "#86868b",
+                                                                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                                                                display: "block",
+                                                                                mt: 1,
+                                                                            }}
+                                                                        >
+                                                                            Data: {chave}
+                                                                        </Typography>
+                                                                    ))
+                                                                )}
+
+                                                            </Box>
                                                         }
                                                     />
-                                                    <Tooltip title="Ver detalhes desta simulação" arrow>
+                                                    <Tooltip 
+                                                        title={selecionada === idx ? "Ocultar detalhes" : "Ver detalhes"} 
+                                                        arrow 
+                                                        placement="top"
+                                                    >
                                                         <span>
-                                                            <Button
+                                                            <AppleButton
                                                                 variant="outlined"
-                                                                size="small"
+                                                                size="medium"
                                                                 sx={{
-                                                                    ml: 2,
-                                                                    fontWeight: 500,
-                                                                    borderRadius: 3,
-                                                                    background: "#fff",
-                                                                    color: "primary.main",
-                                                                    border: "1.5px solid #e3e8ee",
-                                                                    transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
-                                                                    boxShadow: "none",
+                                                                    borderColor: "#d2d2d7",
+                                                                    color: "#1d1d1f",
+                                                                    minWidth: "120px",
                                                                     "&:hover": {
-                                                                        background: "#f5f5f7",
-                                                                        borderColor: "#b0b8c9",
-                                                                        color: "primary.main",
-                                                                        boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                                                        transform: "scale(1.01)",
+                                                                        borderColor: "#86868b",
+                                                                        backgroundColor: "rgba(0, 0, 0, 0.04)",
                                                                     },
                                                                 }}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    setSelecionada(idx);
+                                                                    setSelecionada(selecionada === idx ? null : idx);
                                                                 }}
                                                             >
-                                                                Ver Detalhes
-                                                            </Button>
+                                                                {selecionada === idx ? "Ocultar" : "Detalhes"}
+                                                            </AppleButton>
                                                         </span>
                                                     </Tooltip>
                                                 </ListItemButton>
@@ -230,9 +373,18 @@ export default function HistoricoSimulacoes() {
                                 </List>
                             )}
                         </Box>
+
+                        {/* Resultado da simulação selecionada */}
                         {selecionada !== null && historico[selecionada] && (
-                            <Fade in>
-                                <Box mt={4} width="100%">
+                            <Fade in timeout={500}>
+                                <Box 
+                                    mt={4}
+                                    sx={{
+                                        borderRadius: 3,
+                                        border: "1px solid #e5e5e7",
+                                        overflow: "hidden",
+                                    }}
+                                >
                                     <SimulacaoResultado result={historico[selecionada]} />
                                 </Box>
                             </Fade>

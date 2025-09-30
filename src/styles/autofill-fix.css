@@ -1,0 +1,18 @@
+/* Fix autofill/autocomplete fundo preto em todos os browsers */
+input:-webkit-autofill,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:hover,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:hover,
+select:-webkit-autofill,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0 100px #fff inset !important;
+  box-shadow: 0 0 0 100px #fff inset !important;
+  background: #fff !important;
+  -webkit-text-fill-color: #1d1d1f !important;
+  color: #1d1d1f !important;
+  border-radius: 12px !important;
+  transition: background 0.18s;
+}

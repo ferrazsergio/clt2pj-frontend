@@ -13,11 +13,8 @@ export interface AuthContextType {
     login: (data: LoginDTO) => Promise<void>;
     register: (data: RegistroDTO) => Promise<void>;
     logout: () => void;
-    loginOAuth2: (data: { token: string; usuario: string; provider: string }) => void;
+    loginOAuth2: (data: { token: string; usuario: Usuario; provider: string }) => void; // Corrigido!
     isAuthenticated: boolean;
-    // Métodos adicionais futuros:
-    // refreshToken?: () => Promise<void>;
-    // updateProfile?: (data: Partial<Usuario>) => Promise<void>;
 }
 
 // Valor padrão: lança erro ao usar fora do provider, previne bugs silenciosos.

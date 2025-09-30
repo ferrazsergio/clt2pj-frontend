@@ -16,55 +16,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<Usuario | null>(null);
     const [token, setToken] = useState<string | null>(null);
 
-    // Carrega dados do localStorage ao inicializar
-    useEffect(() => {
-        const storedToken = localStorage.getItem("token");
-        const storedUser = localStorage.getItem("user");
+            // Carrega dados do localStorage ao inicializar
+            useEffect(() => {
+            const storedToken = localStorage.getItem("token");
+            const storedUser = localStorage.getItem("user");
 
-        if (storedToken) setToken(storedToken);
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (error) {
-                console.error("Erro ao parsear usuário do localStorage:", error);
-                localStorage.removeItem("user");
+            console.log("🔐 DEBUG - Carregando do localStorage:", {
+                storedToken: storedToken ? "Presente" : "Ausente",
+                storedUser: storedUser ? "Presente" : "Ausente"
+            });
+
+            if (storedToken) {
+                setToken(storedToken);
+                console.log("🔐 DEBUG - Token definido no state");
             }
-        }
-    }, []);
+            
+            if (storedUser) {
+                try {
+                    const parsedUser = JSON.parse(storedUser);
+                    console.log("🔐 DEBUG - Usuário parseado do localStorage:", parsedUser);
+                    console.log("🔐 DEBUG - ID do usuário parseado:", parsedUser.id);
+                    
+                    setUser(parsedUser);
+                    console.log("🔐 DEBUG - Usuário definido no state");
+                } catch (error) {
+                    console.error("Erro ao parsear usuário do localStorage:", error);
+                    localStorage.removeItem("user");
+                }
+            }
+        }, []);
 
-    // Login tradicional (usuário/senha)
-    const login = async (data: LoginDTO) => {
-        try {
-            const token = await loginApi(data);
-            // Aqui você pode buscar perfil do usuário, se a API retornar.
-            const usuario: Usuario = {
-                id: "",
-                email: data.email,
-                senha: "",
-                papeis: []
-            };
-
-            setToken(token);
-            setUser(usuario);
-            localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify(usuario));
-        } catch (err) {
-            console.error("Erro ao fazer login:", err);
-            throw err;
-        }
-    };
+        const login = async (data: LoginDTO) => {
+            try {
+                const { token, usuario } = await loginApi(data);
+                console.log("🔐 DEBUG - Salvando no localStorage:", usuario);
+                
+                setToken(token);
+                setUser(usuario);
+                localStorage.setItem("token", token);
+                localStorage.setItem("user", JSON.stringify(usuario));
+                
+                console.log("🔐 DEBUG - Login concluído, usuário no state:", usuario);
+            } catch (err) {
+                console.error("Erro ao fazer login:", err);
+                throw err;
+            }
+        };
 
     // Registro de novo usuário
     const register = async (data: RegistroDTO) => {
         try {
-            const token = await registerApi(data);
-            const usuario: Usuario = {
-                id: "",
-                email: data.email,
-                senha: "",
-                papeis: []
-            };
-
+            const { token, usuario } = await registerApi(data); // <-- agora retorna {token, usuario}
             setToken(token);
             setUser(usuario);
             localStorage.setItem("token", token);
@@ -76,18 +78,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // Login OAuth2 (Google/GitHub)
-    const loginOAuth2 = (data: { token: string; usuario: string; provider: string }) => {
-        const usuario: Usuario = {
-            id: "",
-            email: data.usuario,
-            senha: "",
-            papeis: []
-        };
-
+    const loginOAuth2 = (data: { token: string; usuario: Usuario; provider: string }) => {
         setToken(data.token);
-        setUser(usuario);
+        setUser(data.usuario);
         localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(usuario));
+        localStorage.setItem("user", JSON.stringify(data.usuario));
     };
 
     // Logout

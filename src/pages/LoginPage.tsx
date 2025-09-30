@@ -14,8 +14,10 @@ import {
     CircularProgress,
     Fade,
     Zoom,
+    Slide,
     Tooltip,
     styled,
+    alpha,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import GoogleIcon from "@mui/icons-material/Google";
@@ -28,37 +30,77 @@ import LoginIcon from "@mui/icons-material/Login";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
-// Fix autofill background black (Chrome/Edge/Safari)
-const StyledTextField = styled(TextField)(({ theme }) => ({
-    "& input, & .MuiInputBase-input": {
-        background: "#fff !important",
-        WebkitBoxShadow: "0 0 0 100px #fff inset !important",
-        boxShadow: "0 0 0 100px #fff inset !important",
-        WebkitTextFillColor: "#1d1d1f !important",
-        color: "#1d1d1f",
+// Apple-style TextField com correção para autofill
+const AppleTextField = styled(TextField)(({ theme }) => ({
+    "& .MuiOutlinedInput-root": {
         borderRadius: 12,
-        fontFamily: "'SF Pro Display', 'Inter', 'Roboto', 'Arial', sans-serif"
+        backgroundColor: "#ffffff",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        "&:hover": {
+            backgroundColor: "#fafafa",
+            "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: alpha(theme.palette.primary.main, 0.3),
+            },
+        },
+        "&.Mui-focused": {
+            backgroundColor: "#ffffff",
+            boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`,
+            "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.primary.main,
+                borderWidth: 2,
+            },
+        },
+        "& input": {
+            background: "#fff !important",
+            WebkitBoxShadow: "0 0 0 100px #fff inset !important",
+            boxShadow: "0 0 0 100px #fff inset !important",
+            WebkitTextFillColor: "#1d1d1f !important",
+            color: "#1d1d1f",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif",
+            fontSize: "1rem",
+            fontWeight: 400,
+        },
     },
-    "&:-webkit-autofill": {
-        background: "#fff !important",
-        WebkitBoxShadow: "0 0 0 100px #fff inset !important",
-        boxShadow: "0 0 0 100px #fff inset !important",
-        WebkitTextFillColor: "#1d1d1f !important",
-        color: "#1d1d1f !important",
-        borderRadius: 12,
+    "& .MuiOutlinedInput-notchedOutline": {
+        borderColor: "#d2d2d7",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
     },
-    background: "#fff",
+    "& .MuiInputLabel-root": {
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif",
+        fontWeight: 500,
+    },
+}));
+
+// Botão Apple-style
+const AppleButton = styled(Button)(({ theme }) => ({
     borderRadius: 12,
+    padding: "12px 24px",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif",
+    fontSize: "1rem",
+    fontWeight: 600,
+    textTransform: "none",
+    boxShadow: "none",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    "&:hover": {
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+        transform: "translateY(-1px)",
+    },
+    "&:active": {
+        transform: "translateY(0)",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
+    },
 }));
 
 function isEmailValid(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
 function isSenhaValid(senha: string) {
     return senha.length >= 6;
 }
 
 export default function LoginPage() {
+    const [mounted, setMounted] = useState(false);
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -68,8 +110,12 @@ export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const oauthGoogleUrl = "http://localhost:8080/oauth2/authorization/google";
-    const oauthGithubUrl = "http://localhost:8080/oauth2/authorization/github";
+    const oauthGithubUrl = "http://localhost:8080/authorization/github";
 
     const handleBack = () => {
         if (window.history.length > 2) {
@@ -114,110 +160,118 @@ export default function LoginPage() {
         setShowPassword(s => !s);
     };
 
+    const isFormValid = isEmailValid(email) && isSenhaValid(senha);
+
     return (
         <Box
             sx={{
                 minHeight: "100vh",
                 width: "100vw",
-                bgcolor: "background.default",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                py: { xs: 3, md: 6 }
+                bgcolor: "#fafafa",
+                py: { xs: 3, md: 6 },
             }}
         >
             <Container maxWidth="sm">
-                {/* Botão Voltar */}
-                <Fade in>
-                    <Box sx={{ mb: 3 }}>
-                        <Tooltip title="Voltar" arrow>
+                {/* Header com botão voltar */}
+                <Slide direction="down" in={mounted} timeout={500}>
+                    <Box sx={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 2,
+                        mb: 4 
+                    }}>
+                        <Tooltip title="Voltar" arrow placement="bottom">
                             <span>
-                                <Button
+                                <AppleButton
                                     startIcon={<ArrowBackIcon />}
                                     variant="outlined"
-                                    color="primary"
                                     onClick={handleBack}
+                                    disabled={loading || loadingSocial !== null}
                                     sx={{
-                                        fontWeight: 600,
-                                        textTransform: "none",
-                                        borderRadius: 3,
-                                        background: "#fff",
-                                        border: "1.5px solid #e3e8ee",
-                                        boxShadow: "none",
-                                        color: "primary.main",
-                                        transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
+                                        borderColor: "#d2d2d7",
+                                        color: "#1d1d1f",
                                         "&:hover": {
-                                            background: "#f5f5f7",
-                                            borderColor: "#b0b8c9",
-                                            color: "primary.main",
-                                            boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                            transform: "scale(1.01)",
+                                            borderColor: "#86868b",
+                                            backgroundColor: "rgba(0, 0, 0, 0.04)",
                                         },
                                     }}
-                                    disabled={loading || loadingSocial !== null}
                                 >
                                     Voltar
-                                </Button>
+                                </AppleButton>
                             </span>
                         </Tooltip>
                     </Box>
-                </Fade>
+                </Slide>
 
-                <Zoom in>
-                    <Paper
-                        elevation={3}
+                {/* Card principal do login */}
+                <Zoom in={mounted} timeout={600}>
+                    <Paper 
+                        elevation={0}
                         sx={{
-                            p: { xs: 3, md: 4 },
-                            borderRadius: 5,
-                            boxShadow: "0 1.5px 16px rgba(0,0,0,0.06)",
-                            border: "1.2px solid #e3e8ee",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            maxWidth: 430,
+                            p: { xs: 3, md: 5 },
+                            maxWidth: 480,
                             mx: "auto",
-                            minHeight: { xs: 430, md: 0 },
-                            background: "#fff",
-                            transition: "box-shadow 0.14s, border 0.13s",
+                            borderRadius: 4,
+                            border: "1px solid #e5e5e7",
+                            backgroundColor: "#ffffff",
+                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                             "&:hover": {
-                                boxShadow: "0 3px 28px rgba(0,0,0,0.11)",
-                                border: "1.7px solid #b0b8c9",
+                                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.06)",
+                                borderColor: "#d2d2d7",
                             },
                         }}
                     >
-                        {/* Header */}
-                        <Box
-                            sx={{
-                                width: 56,
-                                height: 56,
-                                borderRadius: "50%",
-                                bgcolor: "background.default",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                mb: 2,
-                            }}
-                        >
-                            <LoginIcon sx={{ fontSize: 32, color: "primary.main" }} />
+                        {/* Ícone e Título */}
+                        <Box sx={{ textAlign: "center", mb: 4 }}>
+                            <Box
+                                sx={{
+                                    width: 64,
+                                    height: 64,
+                                    borderRadius: "50%",
+                                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    mx: "auto",
+                                    mb: 2,
+                                    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                                }}
+                            >
+                                <LoginIcon sx={{ fontSize: 32, color: "#ffffff" }} />
+                            </Box>
+                            <Typography 
+                                variant="h4" 
+                                sx={{ 
+                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                    fontWeight: 700,
+                                    color: "#1d1d1f",
+                                    mb: 1,
+                                }}
+                            >
+                                Bem-vindo de volta
+                            </Typography>
+                            <Typography 
+                                variant="body1" 
+                                sx={{ 
+                                    color: "#86868b",
+                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                                }}
+                            >
+                                Entre com suas credenciais para continuar
+                            </Typography>
                         </Box>
-                        <Typography variant="h5" gutterBottom align="center" sx={{ fontWeight: 700, color: "primary.main" }}>
-                            Bem-vindo de volta
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-                            Entre com suas credenciais para continuar
-                        </Typography>
 
-                        {/* Formulário */}
                         <Box
                             component="form"
                             onSubmit={handleSubmit}
-                            display="flex"
-                            flexDirection="column"
-                            gap={2.5}
-                            width="100%"
-                            autoComplete="off"
+                            sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 3,
+                            }}
                         >
-                            <StyledTextField
+                            {/* Campo Email */}
+                            <AppleTextField
                                 label="E-mail"
                                 type="email"
                                 value={email}
@@ -231,21 +285,19 @@ export default function LoginPage() {
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <EmailIcon color="action" />
+                                            <EmailIcon sx={{ color: "#86868b" }} />
                                         </InputAdornment>
                                     ),
                                 }}
                                 helperText={
-                                    <span>
-                                        {!isEmailValid(email) && email.length > 0 && (
-                                            <Typography color="error" variant="caption">
-                                                Email inválido.
-                                            </Typography>
-                                        )}
-                                    </span>
+                                    !isEmailValid(email) && email.length > 0 
+                                        ? "Digite um e-mail válido" 
+                                        : ""
                                 }
                             />
-                            <StyledTextField
+
+                            {/* Campo Senha */}
+                            <AppleTextField
                                 label="Senha"
                                 type={showPassword ? "text" : "password"}
                                 value={senha}
@@ -258,7 +310,7 @@ export default function LoginPage() {
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <LockIcon color="action" />
+                                            <LockIcon sx={{ color: "#86868b" }} />
                                         </InputAdornment>
                                     ),
                                     endAdornment: (
@@ -271,6 +323,12 @@ export default function LoginPage() {
                                                         disabled={loading || loadingSocial !== null}
                                                         aria-label="toggle password visibility"
                                                         size="small"
+                                                        sx={{
+                                                            color: "#86868b",
+                                                            "&:hover": {
+                                                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                                            },
+                                                        }}
                                                     >
                                                         {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                                                     </IconButton>
@@ -280,205 +338,197 @@ export default function LoginPage() {
                                     ),
                                 }}
                                 helperText={
-                                    <span>
-                                        {!isSenhaValid(senha) && senha.length > 0 && (
-                                            <Typography color="error" variant="caption">
-                                                Mínimo 6 caracteres
-                                            </Typography>
-                                        )}
-                                    </span>
+                                    !isSenhaValid(senha) && senha.length > 0
+                                        ? "Senha deve ter pelo menos 6 caracteres"
+                                        : ""
                                 }
                             />
-                            <Fade in={!!error}>
-                                <Box>
-                                    {error && (
-                                        <Alert severity="error" sx={{ width: "100%" }}>
-                                            {error}
-                                        </Alert>
-                                    )}
-                                </Box>
-                            </Fade>
-                            <Button
+
+                            {/* Alertas de erro */}
+                            {error && (
+                                <Fade in timeout={300}>
+                                    <Alert 
+                                        severity="error"
+                                        sx={{ 
+                                            borderRadius: 3,
+                                            "& .MuiAlert-icon": {
+                                                fontSize: 24,
+                                            }
+                                        }}
+                                    >
+                                        {error}
+                                    </Alert>
+                                </Fade>
+                            )}
+
+                            {/* Botão de submit */}
+                            <AppleButton
                                 type="submit"
                                 variant="contained"
-                                color="primary"
-                                fullWidth
                                 size="large"
-                                disabled={
-                                    loading ||
-                                    loadingSocial !== null ||
-                                    !isEmailValid(email) ||
-                                    !isSenhaValid(senha)
-                                }
+                                fullWidth
+                                disabled={loading || loadingSocial !== null || !isFormValid}
                                 sx={{
-                                    mt: 1,
-                                    py: 1.5,
+                                    mt: 2,
+                                    py: 1.75,
+                                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                    color: "#ffffff",
+                                    fontSize: "1.1rem",
                                     fontWeight: 600,
-                                    borderRadius: "14px",
-                                    background: "#fff",
-                                    color: "primary.main",
-                                    border: "1.5px solid #e3e8ee",
-                                    transition: "background 0.14s, box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
-                                    boxShadow: "none",
                                     "&:hover": {
-                                        background: "#f5f5f7",
-                                        borderColor: "#b0b8c9",
-                                        color: "primary.main",
-                                        boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                                        transform: "scale(1.01)",
-                                    },
-                                    "&:active": {
-                                        background: "#e8e8ed",
-                                        color: "primary.main",
-                                        borderColor: "#b0b8c9",
+                                        background: "linear-gradient(135deg, #5568d3 0%, #6a3f91 100%)",
                                     },
                                     "&.Mui-disabled": {
-                                        background: "#f5f5f7",
-                                        color: "#b0b8c9",
-                                        borderColor: "#e3e8ee",
-                                        cursor: "not-allowed",
+                                        background: "#e5e5e7",
+                                        color: "#86868b",
                                     },
                                 }}
                             >
                                 {loading ? (
-                                    <CircularProgress size={24} color="inherit" />
+                                    <Box display="flex" alignItems="center" gap={1.5}>
+                                        <CircularProgress size={24} sx={{ color: "#ffffff" }} />
+                                        <span>Entrando...</span>
+                                    </Box>
                                 ) : (
                                     "Entrar"
                                 )}
-                            </Button>
+                            </AppleButton>
                         </Box>
 
-                        {/* Divider */}
-                        <Divider sx={{ my: 3, width: "100%", background: "#e3e8ee" }}>
-                            <Typography variant="body2" color="text.secondary">
+                        {/* Divisor elegante */}
+                        <Box sx={{ 
+                            display: "flex", 
+                            alignItems: "center", 
+                            gap: 2,
+                            my: 4,
+                        }}>
+                            <Divider sx={{ flex: 1, borderColor: "#e5e5e7" }} />
+                            <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                    color: "#86868b",
+                                    fontWeight: 600,
+                                    px: 2,
+                                    py: 0.5,
+                                    borderRadius: 2,
+                                    bgcolor: "#f5f5f7",
+                                }}
+                            >
                                 Ou entre com
                             </Typography>
-                        </Divider>
+                            <Divider sx={{ flex: 1, borderColor: "#e5e5e7" }} />
+                        </Box>
 
-                        {/* OAuth Buttons */}
-                        <Zoom in>
-                            <Stack spacing={2} width="100%">
-                                <Tooltip title="Login seguro via Google" arrow>
-                                    <span>
-                                        <Button
-                                            variant="outlined"
-                                            color="primary"
-                                            fullWidth
-                                            size="large"
-                                            startIcon={
-                                                <GoogleIcon
-                                                    sx={{
-                                                        transition: "transform 0.2s",
-                                                        ...(loadingSocial === "google" && { animation: "spin 1s linear infinite" })
-                                                    }}
-                                                />
-                                            }
-                                            sx={{
-                                                py: 1.2,
-                                                fontWeight: 600,
-                                                textTransform: "none",
-                                                borderWidth: 2,
-                                                borderRadius: 3,
-                                                background: "#fff",
-                                                color: "primary.main",
-                                                border: "1.5px solid #e3e8ee",
-                                                transition: "box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
-                                                "&:hover": {
-                                                    boxShadow: "0 0 8px 2px #4285F4",
-                                                    transform: "scale(1.02)",
-                                                    borderColor: "#b0b8c9",
-                                                }
-                                            }}
-                                            disabled={loading || loadingSocial !== null}
-                                            onClick={() => handleSocialClick("google")}
-                                        >
-                                            {loadingSocial === "google" ? (
-                                                <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                                                    <CircularProgress size={20} color="primary" />
-                                                    Redirecionando...
-                                                </Box>
-                                            ) : (
-                                                "Continuar com Google"
-                                            )}
-                                        </Button>
-                                    </span>
-                                </Tooltip>
-                                <Tooltip title="Entrar com GitHub" arrow>
-                                    <span>
-                                        <Button
-                                            variant="outlined"
-                                            color="primary"
-                                            fullWidth
-                                            size="large"
-                                            startIcon={
-                                                <GitHubIcon
-                                                    sx={{
-                                                        transition: "transform 0.2s",
-                                                        ...(loadingSocial === "github" && { animation: "spin 1s linear infinite" })
-                                                    }}
-                                                />
-                                            }
-                                            sx={{
-                                                py: 1.2,
-                                                fontWeight: 600,
-                                                textTransform: "none",
-                                                borderWidth: 2,
-                                                borderRadius: 3,
-                                                background: "#fff",
-                                                color: "primary.main",
-                                                border: "1.5px solid #e3e8ee",
-                                                transition: "box-shadow 0.14s, border 0.14s, color 0.14s, transform 0.11s",
-                                                "&:hover": {
-                                                    boxShadow: "0 0 8px 2px #24292F",
-                                                    transform: "scale(1.02)",
-                                                    borderColor: "#b0b8c9",
-                                                }
-                                            }}
-                                            disabled={loading || loadingSocial !== null}
-                                            onClick={() => handleSocialClick("github")}
-                                        >
-                                            {loadingSocial === "github" ? (
-                                                <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                                                    <CircularProgress size={20} color="inherit" />
-                                                    Redirecionando...
-                                                </Box>
-                                            ) : (
-                                                "Continuar com GitHub"
-                                            )}
-                                        </Button>
-                                    </span>
-                                </Tooltip>
-                            </Stack>
-                        </Zoom>
+                        {/* Botões OAuth */}
+                        <Stack spacing={2} width="100%">
+                            <Tooltip title="Login seguro via Google" arrow placement="top">
+                                <span>
+                                    <AppleButton
+                                        variant="outlined"
+                                        fullWidth
+                                        size="large"
+                                        startIcon={
+                                            <GoogleIcon
+                                                sx={{
+                                                    transition: "transform 0.2s",
+                                                    ...(loadingSocial === "google" && { 
+                                                        animation: "spin 1s linear infinite" 
+                                                    })
+                                                }}
+                                            />
+                                        }
+                                        disabled={loading || loadingSocial !== null}
+                                        onClick={() => handleSocialClick("google")}
+                                        sx={{
+                                            borderColor: "#d2d2d7",
+                                            color: "#1d1d1f",
+                                            "&:hover": {
+                                                borderColor: "#86868b",
+                                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                            },
+                                        }}
+                                    >
+                                        {loadingSocial === "google" ? (
+                                            <Box display="flex" alignItems="center" gap={1.5}>
+                                                <CircularProgress size={20} sx={{ color: "#1d1d1f" }} />
+                                                <span>Redirecionando...</span>
+                                            </Box>
+                                        ) : (
+                                            "Continuar com Google"
+                                        )}
+                                    </AppleButton>
+                                </span>
+                            </Tooltip>
+
+                            <Tooltip title="Entrar com GitHub" arrow placement="bottom">
+                                <span>
+                                    <AppleButton
+                                        variant="outlined"
+                                        fullWidth
+                                        size="large"
+                                        startIcon={
+                                            <GitHubIcon
+                                                sx={{
+                                                    transition: "transform 0.2s",
+                                                    ...(loadingSocial === "github" && { 
+                                                        animation: "spin 1s linear infinite" 
+                                                    })
+                                                }}
+                                            />
+                                        }
+                                        disabled={loading || loadingSocial !== null}
+                                        onClick={() => handleSocialClick("github")}
+                                        sx={{
+                                            borderColor: "#d2d2d7",
+                                            color: "#1d1d1f",
+                                            "&:hover": {
+                                                borderColor: "#86868b",
+                                                backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                            },
+                                        }}
+                                    >
+                                        {loadingSocial === "github" ? (
+                                            <Box display="flex" alignItems="center" gap={1.5}>
+                                                <CircularProgress size={20} sx={{ color: "#1d1d1f" }} />
+                                                <span>Redirecionando...</span>
+                                            </Box>
+                                        ) : (
+                                            "Continuar com GitHub"
+                                        )}
+                                    </AppleButton>
+                                </span>
+                            </Tooltip>
+                        </Stack>
 
                         {/* Footer */}
                         <Box
                             sx={{
-                                mt: 3,
+                                mt: 4,
                                 pt: 3,
-                                borderTop: "1px solid",
-                                borderColor: "divider",
+                                borderTop: "1px solid #e5e5e7",
                                 width: "100%",
                                 textAlign: "center"
                             }}
                         >
                             <Stack direction="row" justifyContent="center" alignItems="center" spacing={0.5}>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="#86868b">
                                     Não tem conta?
                                 </Typography>
                                 <Button
                                     variant="text"
-                                    color="primary"
                                     size="small"
                                     sx={{
                                         fontWeight: 600,
                                         textTransform: "none",
-                                        fontSize: "1em",
+                                        fontSize: "0.875rem",
+                                        color: "#667eea",
                                         minWidth: "unset",
                                         px: 1.5,
                                         py: 0.2,
-                                        borderRadius: "8px",
-                                        lineHeight: 1.2
+                                        borderRadius: "6px",
+                                        "&:hover": {
+                                            backgroundColor: "rgba(102, 126, 234, 0.04)",
+                                        },
                                     }}
                                     onClick={() => navigate("/registro")}
                                     disabled={loading || loadingSocial !== null}
@@ -490,6 +540,7 @@ export default function LoginPage() {
                     </Paper>
                 </Zoom>
             </Container>
+
             {/* Keyframes para animação de ícone */}
             <style>
                 {`@keyframes spin { 100% { transform: rotate(360deg); } }`}
