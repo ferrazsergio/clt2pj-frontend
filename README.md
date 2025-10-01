@@ -1,73 +1,31 @@
-# React + TypeScript + Vite
+# CLT2PJ Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este projeto é o **frontend** da calculadora CLT vs PJ, que ajuda profissionais a comparar de forma clara e detalhada os regimes CLT e PJ antes de tomar uma decisão importante. O sistema foi inspirado na publicação do [Bruno Prata](https://www.linkedin.com/feed/update/urn:li:activity:7374157284022710272/) e desenvolvido com **React + TypeScript + Vite**.
 
-Currently, two official plugins are available:
+## Principais Funcionalidades
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Login Social**: Google e LinkedIn para facilitar o acesso.
+- **Simulação de Regimes**: Informe seus salários CLT e PJ, selecione benefícios e veja o comparativo detalhado.
+- **Sugestão de Reserva**: Saiba quanto reservar para manter sua segurança financeira ao migrar para PJ.
+- **Dashboard com Histórico**: Salve e acompanhe todas as suas simulações.
+- **Responsivo**: Funciona bem no desktop e no mobile.
 
-## React Compiler
+## Como rodar localmente
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/ferrazsergio/clt2pj-frontend.git
+cd clt2pj-frontend
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+O backend está em: [clt2pj-backend](https://github.com/ferrazsergio/clt2pj-backend)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Stack
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- React
+- TypeScript
+- Vite
+- Material UI (MUI)
+- OAuth Login Social
+- Axios
