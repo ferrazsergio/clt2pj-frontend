@@ -118,6 +118,16 @@ function formatarMoeda(valor: string) {
     });
 }
 
+// Função para calcular o total de benefícios
+function calcularTotalBeneficios(beneficios: BeneficioDTO[]): number {
+    return beneficios.reduce((total, beneficio) => {
+        const valor = typeof beneficio.valor === "string" 
+            ? toCentavos(beneficio.valor) / 100
+            : beneficio.valor || 0;
+        return total + valor;
+    }, 0);
+}
+
 const tipoTributacaoOptions = [
     "MEI",
     "Simples Nacional",
@@ -193,42 +203,91 @@ export default function SimulacaoPage() {
         setError("");
         setApiError(null);
         setSaveSuccess(false);
+        
         try {
             if (!isFormValid) {
                 setError("Preencha todos os campos corretamente.");
                 setLoading(false);
                 return;
             }
+
+            // Processar benefícios garantindo que os valores sejam números
+            const beneficiosCltProcessados = beneficiosClt.map(b => ({
+                ...b,
+                valor: typeof b.valor === "string"
+                    ? toCentavos(b.valor) / 100
+                    : b.valor || 0
+            }));
+
+            const beneficiosPjProcessados = beneficiosPj.map(b => ({
+                ...b,
+                valor: typeof b.valor === "string"
+                    ? toCentavos(b.valor) / 100
+                    : b.valor || 0
+            }));
+
+            // Calcular totais para debug
+            const totalBeneficiosPj = calcularTotalBeneficios(beneficiosPj);
+            console.log("📊 Total de benefícios PJ:", totalBeneficiosPj);
+
             const dto: SimulacaoRequestDTO = {
                 salarioClt: toCentavos(salarioClt) / 100,
-                beneficiosClt: beneficiosClt.map(b => ({
-                    ...b,
-                    valor: typeof b.valor === "string"
-                        ? toCentavos(b.valor) / 100
-                        : b.valor
-                })),
+                beneficiosClt: beneficiosCltProcessados,
                 salarioPj: toCentavos(salarioPj) / 100,
                 tipoTributacao,
-                beneficiosPj: beneficiosPj.map(b => ({
-                    ...b,
-                    valor: typeof b.valor === "string"
-                        ? toCentavos(b.valor) / 100
-                        : b.valor
-                })),
+                beneficiosPj: beneficiosPjProcessados,
                 reservaEmergencia,
                 beneficiosSelecionados: [
-                    ...beneficiosClt.map(b => b.nome),
-                    ...beneficiosPj.map(b => b.nome)
+                    ...beneficiosCltProcessados.map(b => b.nome),
+                    ...beneficiosPjProcessados.map(b => b.nome)
                 ]
             };
 
+            console.log("📤 Enviando para API:", {
+                ...dto,
+                totalBeneficiosPj: totalBeneficiosPj,
+                beneficiosPjDetalhado: beneficiosPjProcessados
+            });
+
             const response = await simularApi(dto);
+            
             if (!response || typeof response !== "object" || !("salarioLiquidoClt" in response)) {
                 throw new Error("Resposta inválida do servidor.");
             }
-            setResult(response);
+
+            // Verificar se os benefícios PJ foram subtraídos corretamente
+            console.log("📥 Resposta da API:", response);
+            
+            // Se a API não estiver subtraindo os benefícios PJ, fazer isso manualmente
+            let salarioLiquidoPjAjustado = response.salarioLiquidoPj;
+            
+            // Verificar se precisamos subtrair manualmente os benefícios PJ
+            if (totalBeneficiosPj > 0) {
+                // Se o salário líquido PJ não foi reduzido pelos benefícios, subtrair manualmente
+                const salarioBrutoPj = toCentavos(salarioPj) / 100;
+                const possivelSalarioSemBeneficios = salarioLiquidoPjAjustado + totalBeneficiosPj;
+                
+                // Se o salário líquido + benefícios não faz sentido, é provável que os benefícios não foram subtraídos
+                if (Math.abs(possivelSalarioSemBeneficios - salarioBrutoPj) < Math.abs(salarioLiquidoPjAjustado - salarioBrutoPj)) {
+                    console.log("⚠️ Benefícios PJ não foram subtraídos pela API, subtraindo manualmente");
+                    salarioLiquidoPjAjustado = response.salarioLiquidoPj - totalBeneficiosPj;
+                }
+            }
+
+            const resultadoAjustado = {
+                ...response,
+                salarioLiquidoPj: salarioLiquidoPjAjustado,
+                // Também ajustar outros campos relacionados se necessário
+                totalBeneficiosPj: totalBeneficiosPj,
+                beneficiosPjDetalhado: beneficiosPjProcessados
+            };
+
+            console.log("✅ Resultado final ajustado:", resultadoAjustado);
+            setResult(resultadoAjustado);
+
         } catch (err: unknown) {
             const error = err as { message?: string };
+            console.error("❌ Erro na simulação:", error);
             setApiError(error?.message || "Erro ao realizar simulação.");
         }
         setLoading(false);
@@ -244,13 +303,16 @@ export default function SimulacaoPage() {
         setSaving(true);
         setApiError(null);
         try {
-             const simulacaoParaSalvar = {
-                usuario: { 
-                    id: user.id,
-                    email: user.email,
-                    papeis: user.papeis
-                    // Inclua todas as propriedades que a entidade Usuario precisa
-                },
+            // Corrigir valorReservaSugerido para caso venha 0 ou indefinido
+            const valorReservaSugerido =
+                (result.valorReservaSugerido !== undefined && result.valorReservaSugerido !== null && result.valorReservaSugerido > 0)
+                    ? result.valorReservaSugerido
+                    : (result.provisaoBeneficios !== undefined && result.provisaoBeneficios !== null)
+                        ? result.provisaoBeneficios
+                        : 0;
+
+            const simulacaoParaSalvar = {
+                usuario: { id: user.id, email: user.email, papeis: user.papeis },
                 salarioClt: result.salarioLiquidoClt,
                 salarioPj: result.salarioLiquidoPj,
                 beneficios: JSON.stringify({
@@ -260,19 +322,26 @@ export default function SimulacaoPage() {
                     reservaEmergencia: reservaEmergencia
                 }),
                 resultadoComparativo: `CLT: ${result.salarioLiquidoClt} | PJ: ${result.salarioLiquidoPj} | Vantagem: ${result.salarioLiquidoPj > result.salarioLiquidoClt ? 'PJ' : 'CLT'}`,
-                dataCriacao: new Date().toISOString()
+                dataCriacao: new Date().toISOString(),
+                totalBeneficiosClt: calcularTotalBeneficios(beneficiosClt),
+                totalBeneficiosPj: calcularTotalBeneficios(beneficiosPj),
+                beneficiosSelecionadosClt: beneficiosClt.map(b => b.nome),
+                beneficiosSelecionadosPj: beneficiosPj.map(b => b.nome),
+                reservaEmergencia: reservaEmergencia,
+                valorReservaSugerido: valorReservaSugerido,
+                tipoTributacao: tipoTributacao
             };
 
             console.log("📝 Salvando simulação:", simulacaoParaSalvar);
-            
+
             await salvarSimulacaoApi(simulacaoParaSalvar, token);
-            
+
             setSaveSuccess(true);
             setApiError(null);
-            
+
             // Auto-hide success message after 3 seconds
             setTimeout(() => setSaveSuccess(false), 3000);
-            
+
         } catch (error: any) {
             console.error("❌ Erro ao salvar simulação:", error);
             setApiError("Erro ao salvar simulação: " + (error.message || "Tente novamente"));
@@ -281,8 +350,11 @@ export default function SimulacaoPage() {
             setSaving(false);
         }
     };
-console.log("🔐 DEBUG - SimulacaoPage - User atual:", user);
-console.log("🔐 DEBUG - SimulacaoPage - User ID:", user?.id);
+
+    // Calcular totais para exibir no preview
+    const totalBeneficiosClt = calcularTotalBeneficios(beneficiosClt);
+    const totalBeneficiosPj = calcularTotalBeneficios(beneficiosPj);
+
     return (
         <>
             <style>
@@ -478,6 +550,19 @@ console.log("🔐 DEBUG - SimulacaoPage - User ID:", user?.id);
                                             setBeneficios={setBeneficiosClt}
                                             label="Benefícios CLT"
                                         />
+                                        {totalBeneficiosClt > 0 && (
+                                            <Typography 
+                                                variant="caption" 
+                                                sx={{ 
+                                                    color: "#4CAF50",
+                                                    fontWeight: 600,
+                                                    mt: 1,
+                                                    display: "block"
+                                                }}
+                                            >
+                                                Total em benefícios CLT: R$ {totalBeneficiosClt.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 </Box>
 
@@ -579,8 +664,25 @@ console.log("🔐 DEBUG - SimulacaoPage - User ID:", user?.id);
                                         <BeneficioSelector
                                             beneficios={beneficiosPj}
                                             setBeneficios={setBeneficiosPj}
-                                            label="Benefícios PJ"
+                                            label="Benefícios PJ (serão descontados do valor líquido)"
                                         />
+                                        {totalBeneficiosPj > 0 && (
+                                            <Typography 
+                                                variant="caption" 
+                                                sx={{ 
+                                                    color: "#FF9800",
+                                                    fontWeight: 600,
+                                                    mt: 1,
+                                                    display: "block"
+                                                }}
+                                            >
+                                                Total em benefícios PJ: R$ {totalBeneficiosPj.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                                <br />
+                                                <Typography component="span" variant="caption" sx={{ color: "#666", fontSize: "0.7rem" }}>
+                                                    Este valor será descontado do seu salário líquido PJ
+                                                </Typography>
+                                            </Typography>
+                                        )}
                                     </Box>
                                 </Box>
 
@@ -599,6 +701,31 @@ console.log("🔐 DEBUG - SimulacaoPage - User ID:", user?.id);
                                             {apiError || error}
                                         </Alert>
                                     </Fade>
+                                )}
+
+                                {/* Preview dos cálculos */}
+                                {(isMoedaValid(salarioClt) || isMoedaValid(salarioPj)) && (
+                                    <Box sx={{ 
+                                        bgcolor: "#f8f9fa", 
+                                        p: 2, 
+                                        borderRadius: 2,
+                                        border: "1px solid #e9ecef"
+                                    }}>
+                                        <Typography variant="caption" sx={{ color: "#6c757d", fontWeight: 600, mb: 1, display: "block" }}>
+                                            PREVIEW DOS VALORES:
+                                        </Typography>
+                                        {isMoedaValid(salarioClt) && (
+                                            <Typography variant="body2" sx={{ color: "#495057", mb: 0.5 }}>
+                                                CLT Bruto: R$ {formatarMoeda(salarioClt)} + R$ {totalBeneficiosClt.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (benefícios)
+                                            </Typography>
+                                        )}
+                                        {isMoedaValid(salarioPj) && (
+                                            <Typography variant="body2" sx={{ color: "#495057" }}>
+                                                PJ Bruto: R$ {formatarMoeda(salarioPj)} - R$ {totalBeneficiosPj.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} (benefícios) 
+                                                = R$ {((toCentavos(salarioPj) / 100) - totalBeneficiosPj).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} líquido
+                                            </Typography>
+                                        )}
+                                    </Box>
                                 )}
 
                                 {/* Botão de submit */}

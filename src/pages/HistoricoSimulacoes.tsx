@@ -50,6 +50,13 @@ const AppleButton = styled(Button)(({ theme }) => ({
     },
 }));
 
+function formatarMoeda(valor: number) {
+    return valor.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+    });
+}
+
 export default function HistoricoSimulacoes() {
     const [mounted, setMounted] = useState(false);
     const { user, token } = useAuth();
@@ -73,33 +80,62 @@ export default function HistoricoSimulacoes() {
     };
 
     useEffect(() => {
-    if (!user || !token) {
-        navigate("/login");
-        return;
-    }
-
-    
-    buscarHistoricoApi(user.email, token)
-        .then((data) => {
-            
-            if (!data || !Array.isArray(data)) {
+        if (!user || !token) {
+            navigate("/login");
+            return;
+        }
+        buscarHistoricoApi(user.email, token)
+            .then((data) => {
+                if (!data || !Array.isArray(data)) {
+                    setApiError("Erro ao buscar histórico. Tente novamente.");
+                    setHistorico([]);
+                } else {
+                    setHistorico(data);
+                }
+            })
+            .catch(() => {
                 setApiError("Erro ao buscar histórico. Tente novamente.");
-                setHistorico([]);
-            } else {
-                setHistorico(data);
-            }
-        })
-        .catch((error) => {
-            setApiError("Erro ao buscar histórico. Tente novamente.");
-        })
-        .finally(() => setLoading(false));
-}, [user, token, navigate]);
+            })
+            .finally(() => setLoading(false));
+    }, [user, token, navigate]);
 
-    const formatarMoeda = (valor: number) => {
-        return valor.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-        });
+    // Novo componente para renderizar resumo formatado
+    const renderResumoSimulacao = (sim: SimulacaoResponseDTO) => {
+        const clt = sim.comparativoDetalhado?.clt || {};
+        const pj = sim.comparativoDetalhado?.pj || {};
+        return (
+            <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" sx={{ color: "#86868b", display: "block" }}>
+                    <strong>CLT:</strong>
+                    {" Salário Líquido "}
+                    {clt.salarioLiquido !== undefined ? formatarMoeda(Number(clt.salarioLiquido)) : "-"}
+                    {" | INSS: "}
+                    {clt.inss !== undefined ? formatarMoeda(Number(clt.inss)) : "-"}
+                    {" | IRRF: "}
+                    {clt.irrf !== undefined ? formatarMoeda(Number(clt.irrf)) : "-"}
+                    {" | Benefícios: "}
+                    {clt.totalBeneficios !== undefined ? formatarMoeda(Number(clt.totalBeneficios)) : "-"}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "#86868b", display: "block", mt: 1 }}>
+                    <strong>PJ:</strong>
+                    {" Salário Líquido "}
+                    {pj.salarioLiquido !== undefined ? formatarMoeda(Number(pj.salarioLiquido)) : "-"}
+                    {" | Tipo Tributação: "}
+                    {pj.tipoTributacao || "-"}
+                    {" | Reserva Emergência: "}
+                    {pj.reservaEmergencia !== undefined ? pj.reservaEmergencia + "%" : "-"}
+                    {" | Benefícios: "}
+                    {pj.totalBeneficios !== undefined ? formatarMoeda(Number(pj.totalBeneficios)) : "-"}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "#86868b", display: "block", mt: 1 }}>
+                    <strong>Reserva Sugerida:</strong>
+                    {" "}
+                    {sim.comparativoDetalhado?.valorReservaSugerido !== undefined
+                        ? formatarMoeda(Number(sim.comparativoDetalhado.valorReservaSugerido))
+                        : "-"}
+                </Typography>
+            </Box>
+        );
     };
 
     return (
@@ -114,11 +150,11 @@ export default function HistoricoSimulacoes() {
             <Container maxWidth="lg">
                 {/* Header com botão voltar */}
                 <Slide direction="down" in={mounted} timeout={500}>
-                    <Box sx={{ 
-                        display: "flex", 
-                        alignItems: "center", 
+                    <Box sx={{
+                        display: "flex",
+                        alignItems: "center",
                         gap: 2,
-                        mb: 4 
+                        mb: 4
                     }}>
                         <Tooltip title="Voltar" arrow placement="bottom">
                             <span>
@@ -144,7 +180,7 @@ export default function HistoricoSimulacoes() {
 
                 {/* Card principal do histórico */}
                 <Zoom in={mounted} timeout={600}>
-                    <Paper 
+                    <Paper
                         elevation={0}
                         sx={{
                             p: { xs: 3, md: 5 },
@@ -176,9 +212,9 @@ export default function HistoricoSimulacoes() {
                             >
                                 <HistoryIcon sx={{ fontSize: 32, color: "#ffffff" }} />
                             </Box>
-                            <Typography 
-                                variant="h4" 
-                                sx={{ 
+                            <Typography
+                                variant="h4"
+                                sx={{
                                     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
                                     fontWeight: 700,
                                     color: "#1d1d1f",
@@ -187,9 +223,9 @@ export default function HistoricoSimulacoes() {
                             >
                                 Histórico de Simulações
                             </Typography>
-                            <Typography 
-                                variant="body1" 
-                                sx={{ 
+                            <Typography
+                                variant="body1"
+                                sx={{
                                     color: "#86868b",
                                     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
                                 }}
@@ -198,22 +234,22 @@ export default function HistoricoSimulacoes() {
                             </Typography>
                         </Box>
 
-                        <Divider sx={{ 
-                            mb: 4, 
-                            width: "100%", 
-                            borderColor: "#e5e5e7" 
+                        <Divider sx={{
+                            mb: 4,
+                            width: "100%",
+                            borderColor: "#e5e5e7"
                         }} />
 
                         {/* Conteúdo do histórico */}
                         <Box sx={{ width: "100%" }}>
                             {loading ? (
                                 <Stack alignItems="center" py={4}>
-                                    <CircularProgress 
+                                    <CircularProgress
                                         size={48}
-                                        sx={{ color: "#667eea" }} 
+                                        sx={{ color: "#667eea" }}
                                     />
-                                    <Typography 
-                                        mt={2} 
+                                    <Typography
+                                        mt={2}
                                         color="#86868b"
                                         fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
                                     >
@@ -222,9 +258,9 @@ export default function HistoricoSimulacoes() {
                                 </Stack>
                             ) : apiError ? (
                                 <Fade in timeout={300}>
-                                    <Alert 
+                                    <Alert
                                         severity="error"
-                                        sx={{ 
+                                        sx={{
                                             borderRadius: 3,
                                             mb: 3,
                                             "& .MuiAlert-icon": {
@@ -238,16 +274,16 @@ export default function HistoricoSimulacoes() {
                             ) : historico.length === 0 ? (
                                 <Fade in timeout={300}>
                                     <Box sx={{ textAlign: "center", py: 4 }}>
-                                        <Typography 
-                                            variant="h6" 
+                                        <Typography
+                                            variant="h6"
                                             color="#86868b"
                                             fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
                                             gutterBottom
                                         >
                                             Nenhuma simulação encontrada
                                         </Typography>
-                                        <Typography 
-                                            variant="body2" 
+                                        <Typography
+                                            variant="body2"
                                             color="#86868b"
                                             fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif"
                                         >
@@ -285,9 +321,9 @@ export default function HistoricoSimulacoes() {
                                                         primary={
                                                             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
                                                                 <InfoIcon sx={{ color: "#667eea", fontSize: 20 }} />
-                                                                <Typography 
+                                                                <Typography
                                                                     variant="h6"
-                                                                    sx={{ 
+                                                                    sx={{
                                                                         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
                                                                         fontWeight: 600,
                                                                         color: "#1d1d1f",
@@ -297,51 +333,11 @@ export default function HistoricoSimulacoes() {
                                                                 </Typography>
                                                             </Box>
                                                         }
-                                                        secondary={
-                                                            <Box sx={{ mt: 1 }}>
-                                                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                                                                    <Typography 
-                                                                        variant="body2"
-                                                                        sx={{ 
-                                                                            color: "#86868b",
-                                                                            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                                        }}
-                                                                    >
-                                                                        <strong>CLT:</strong> {sim.salarioLiquidoCltBR || formatarMoeda(sim.salarioLiquidoClt)}
-                                                                    </Typography>
-                                                                    <Typography 
-                                                                        variant="body2"
-                                                                        sx={{ 
-                                                                            color: "#86868b",
-                                                                            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                                        }}
-                                                                    >
-                                                                        <strong>PJ:</strong> {sim.salarioLiquidoPjBR || formatarMoeda(sim.salarioLiquidoPj)}
-                                                                    </Typography>
-                                                                </Stack>
-                                                               {sim.comparativoDetalhado && (
-                                                                    Object.keys(sim.comparativoDetalhado).map((chave) => (
-                                                                        <Typography 
-                                                                            key={chave}
-                                                                            variant="caption"
-                                                                            sx={{ 
-                                                                                color: "#86868b",
-                                                                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                                                display: "block",
-                                                                                mt: 1,
-                                                                            }}
-                                                                        >
-                                                                            Data: {chave}
-                                                                        </Typography>
-                                                                    ))
-                                                                )}
-
-                                                            </Box>
-                                                        }
+                                                        secondary={renderResumoSimulacao(sim)}
                                                     />
-                                                    <Tooltip 
-                                                        title={selecionada === idx ? "Ocultar detalhes" : "Ver detalhes"} 
-                                                        arrow 
+                                                    <Tooltip
+                                                        title={selecionada === idx ? "Ocultar detalhes" : "Ver detalhes"}
+                                                        arrow
                                                         placement="top"
                                                     >
                                                         <span>
@@ -377,7 +373,7 @@ export default function HistoricoSimulacoes() {
                         {/* Resultado da simulação selecionada */}
                         {selecionada !== null && historico[selecionada] && (
                             <Fade in timeout={500}>
-                                <Box 
+                                <Box
                                     mt={4}
                                     sx={{
                                         borderRadius: 3,

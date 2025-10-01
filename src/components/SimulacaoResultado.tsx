@@ -358,7 +358,7 @@ export default function SimulacaoResultado({ result }: { result: SimulacaoRespon
                                         }}
                                     >
                                         <SavingsIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                                        Reserva Emergência Sugerida PJ
+                                        Reserva para Benefícios CLT
                                     </Typography>
                                     <Typography 
                                         variant="h5" 

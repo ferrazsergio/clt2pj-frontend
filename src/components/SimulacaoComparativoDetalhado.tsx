@@ -11,8 +11,37 @@ function formatReal(valor: number | undefined | null) {
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado: BeneficiosDetalhado | null | undefined }) {
+function formatTributacao(tributacao: string | undefined | null): string {
+    if (!tributacao || tributacao.trim() === "" || tributacao.trim().toLowerCase() === "null") {
+        return "Não informado";
+    }
+    return tributacao;
+}
+
+function formatReserva(reserva: number | undefined | null): string {
+    if (reserva === undefined || reserva === null) return "Não informado";
+    return `${reserva}%`;
+}
+
+function uniq(arr: string[]) {
+    return Array.from(new Set(arr));
+}
+
+export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado: BeneficiosDetalhado | string | null | undefined }) {
     if (!detalhado) return null;
+
+    // Se vier como string (caso backend serialize como JSON), fazer o parse:
+    let parsedDetalhado: BeneficiosDetalhado | null = null;
+    if (typeof detalhado === "string") {
+        try {
+            parsedDetalhado = JSON.parse(detalhado);
+        } catch {
+            parsedDetalhado = null;
+        }
+    } else {
+        parsedDetalhado = detalhado;
+    }
+    if (!parsedDetalhado) return null;
 
     return (
         <Zoom in timeout={600}>
@@ -98,27 +127,11 @@ export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado
                                 </Box>
                                 <Stack spacing={2.5}>
                                     <Box>
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
-                                                color: "#86868b",
-                                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                fontWeight: 600,
-                                                display: "block", 
-                                                mb: 1,
-                                            }}
-                                        >
+                                        <Typography variant="caption" sx={{ color: "#86868b", fontWeight: 600, mb: 1 }}>
                                             Salário Líquido
                                         </Typography>
-                                        <Typography 
-                                            variant="h6" 
-                                            sx={{ 
-                                                fontWeight: 700, 
-                                                color: "#1d1d1f",
-                                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                            }}
-                                        >
-                                            {formatReal(detalhado.clt?.salarioLiquido)}
+                                        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1d1d1f" }}>
+                                            {formatReal(parsedDetalhado.clt?.salarioLiquido)}
                                         </Typography>
                                     </Box>
                                     
@@ -126,95 +139,41 @@ export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado
                                     
                                     <Stack spacing={2}>
                                         <Box>
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
-                                                    color: "#86868b",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                    display: "block", 
-                                                    mb: 0.5,
-                                                }}
-                                            >
+                                            <Typography variant="caption" sx={{ color: "#86868b", mb: 0.5 }}>
                                                 INSS
                                             </Typography>
-                                            <Typography 
-                                                variant="body1" 
-                                                sx={{ 
-                                                    fontWeight: 600, 
-                                                    color: "#1d1d1f",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                }}
-                                            >
-                                                {formatReal(detalhado.clt?.inss)}
+                                            <Typography variant="body1" sx={{ fontWeight: 600, color: "#1d1d1f" }}>
+                                                {formatReal(parsedDetalhado.clt?.inss)}
                                             </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
-                                                    color: "#86868b",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                    display: "block", 
-                                                    mb: 0.5,
-                                                }}
-                                            >
+                                            <Typography variant="caption" sx={{ color: "#86868b", mb: 0.5 }}>
                                                 IRRF
                                             </Typography>
-                                            <Typography 
-                                                variant="body1" 
-                                                sx={{ 
-                                                    fontWeight: 600, 
-                                                    color: "#1d1d1f",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                }}
-                                            >
-                                                {formatReal(detalhado.clt?.irrf)}
+                                            <Typography variant="body1" sx={{ fontWeight: 600, color: "#1d1d1f" }}>
+                                                {formatReal(parsedDetalhado.clt?.irrf)}
                                             </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
-                                                    color: "#86868b",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                    display: "block", 
-                                                    mb: 0.5,
-                                                }}
-                                            >
+                                            <Typography variant="caption" sx={{ color: "#86868b", mb: 0.5 }}>
                                                 Total Benefícios
                                             </Typography>
-                                            <Typography 
-                                                variant="body1" 
-                                                sx={{ 
-                                                    fontWeight: 600, 
-                                                    color: "#1d1d1f",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                }}
-                                            >
-                                                {formatReal(detalhado.clt?.totalBeneficios)}
+                                            <Typography variant="body1" sx={{ fontWeight: 600, color: "#1d1d1f" }}>
+                                                {formatReal(parsedDetalhado.clt?.totalBeneficios)}
                                             </Typography>
                                         </Box>
                                     </Stack>
 
-                                    {detalhado.clt?.beneficiosSelecionados && detalhado.clt.beneficiosSelecionados.length > 0 && (
+                                    {parsedDetalhado.clt?.beneficiosSelecionados && parsedDetalhado.clt.beneficiosSelecionados.length > 0 && (
                                         <Fade in timeout={1000}>
                                             <Box>
                                                 <Divider sx={{ borderColor: "#e5e5e7", my: 2 }} />
                                                 <Box>
-                                                    <Typography 
-                                                        variant="caption" 
-                                                        sx={{ 
-                                                            color: "#86868b",
-                                                            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                            fontWeight: 600,
-                                                            display: "block", 
-                                                            mb: 1.5,
-                                                        }}
-                                                    >
+                                                    <Typography variant="caption" sx={{ color: "#86868b", fontWeight: 600, mb: 1.5 }}>
                                                         Benefícios Selecionados
                                                     </Typography>
                                                     <Stack direction="row" flexWrap="wrap" gap={1}>
-                                                        {detalhado.clt.beneficiosSelecionados.map((b, i) => (
+                                                        {uniq(parsedDetalhado.clt.beneficiosSelecionados).map((b, i) => (
                                                             <Tooltip key={i} title={b} arrow placement="top">
                                                                 <Chip
                                                                     label={b}
@@ -246,14 +205,7 @@ export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado
                     </Box>
 
                     {/* Divider vertical em telas maiores */}
-                    <Divider
-                        orientation="vertical"
-                        flexItem
-                        sx={{ 
-                            display: { xs: "none", md: "block" }, 
-                            borderColor: "#e5e5e7" 
-                        }}
-                    />
+                    <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", md: "block" }, borderColor: "#e5e5e7" }} />
 
                     {/* PJ */}
                     <Box flex={1}>
@@ -281,27 +233,11 @@ export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado
                                 </Box>
                                 <Stack spacing={2.5}>
                                     <Box>
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
-                                                color: "#86868b",
-                                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                fontWeight: 600,
-                                                display: "block", 
-                                                mb: 1,
-                                            }}
-                                        >
+                                        <Typography variant="caption" sx={{ color: "#86868b", fontWeight: 600, mb: 1 }}>
                                             Salário Líquido
                                         </Typography>
-                                        <Typography 
-                                            variant="h6" 
-                                            sx={{ 
-                                                fontWeight: 700, 
-                                                color: "#1d1d1f",
-                                                fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                            }}
-                                        >
-                                            {formatReal(detalhado.pj?.salarioLiquido)}
+                                        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1d1d1f" }}>
+                                            {formatReal(parsedDetalhado.pj?.salarioLiquido)}
                                         </Typography>
                                     </Box>
                                     
@@ -309,95 +245,41 @@ export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado
                                     
                                     <Stack spacing={2}>
                                         <Box>
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
-                                                    color: "#86868b",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                    display: "block", 
-                                                    mb: 0.5,
-                                                }}
-                                            >
+                                            <Typography variant="caption" sx={{ color: "#86868b", mb: 0.5 }}>
                                                 Tipo Tributação
                                             </Typography>
-                                            <Typography 
-                                                variant="body1" 
-                                                sx={{ 
-                                                    fontWeight: 600, 
-                                                    color: "#1d1d1f",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                }}
-                                            >
-                                                {detalhado.pj?.tipoTributacao || "—"}
+                                            <Typography variant="body1" sx={{ fontWeight: 600, color: "#1d1d1f" }}>
+                                                {formatTributacao(parsedDetalhado.pj?.tipoTributacao)}
                                             </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
-                                                    color: "#86868b",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                    display: "block", 
-                                                    mb: 0.5,
-                                                }}
-                                            >
+                                            <Typography variant="caption" sx={{ color: "#86868b", mb: 0.5 }}>
                                                 Reserva Emergência
                                             </Typography>
-                                            <Typography 
-                                                variant="body1" 
-                                                sx={{ 
-                                                    fontWeight: 600, 
-                                                    color: "#1d1d1f",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                }}
-                                            >
-                                                {detalhado.pj?.reservaEmergencia !== undefined && detalhado.pj?.reservaEmergencia !== null ? `${detalhado.pj.reservaEmergencia}%` : "—"}
+                                            <Typography variant="body1" sx={{ fontWeight: 600, color: "#1d1d1f" }}>
+                                                {formatReserva(parsedDetalhado.pj?.reservaEmergencia)}
                                             </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
-                                                    color: "#86868b",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                    display: "block", 
-                                                    mb: 0.5,
-                                                }}
-                                            >
+                                            <Typography variant="caption" sx={{ color: "#86868b", mb: 0.5 }}>
                                                 Total Benefícios
                                             </Typography>
-                                            <Typography 
-                                                variant="body1" 
-                                                sx={{ 
-                                                    fontWeight: 600, 
-                                                    color: "#1d1d1f",
-                                                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                }}
-                                            >
-                                                {formatReal(detalhado.pj?.totalBeneficios)}
+                                            <Typography variant="body1" sx={{ fontWeight: 600, color: "#1d1d1f" }}>
+                                                {formatReal(parsedDetalhado.pj?.totalBeneficios)}
                                             </Typography>
                                         </Box>
                                     </Stack>
 
-                                    {detalhado.pj?.beneficiosSelecionados && detalhado.pj.beneficiosSelecionados.length > 0 && (
+                                    {parsedDetalhado.pj?.beneficiosSelecionados && parsedDetalhado.pj.beneficiosSelecionados.length > 0 && (
                                         <Fade in timeout={1200}>
                                             <Box>
                                                 <Divider sx={{ borderColor: "#e5e5e7", my: 2 }} />
                                                 <Box>
-                                                    <Typography 
-                                                        variant="caption" 
-                                                        sx={{ 
-                                                            color: "#86868b",
-                                                            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                                            fontWeight: 600,
-                                                            display: "block", 
-                                                            mb: 1.5,
-                                                        }}
-                                                    >
+                                                    <Typography variant="caption" sx={{ color: "#86868b", fontWeight: 600, mb: 1.5 }}>
                                                         Benefícios Selecionados
                                                     </Typography>
                                                     <Stack direction="row" flexWrap="wrap" gap={1}>
-                                                        {detalhado.pj.beneficiosSelecionados.map((b, i) => (
+                                                        {uniq(parsedDetalhado.pj.beneficiosSelecionados).map((b, i) => (
                                                             <Tooltip key={i} title={b} arrow placement="top">
                                                                 <Chip
                                                                     label={b}
@@ -429,7 +311,7 @@ export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado
                     </Box>
                 </Stack>
 
-                {detalhado.valorReservaSugerido !== undefined && detalhado.valorReservaSugerido !== null && (
+                {parsedDetalhado.valorReservaSugerido !== undefined && parsedDetalhado.valorReservaSugerido !== null && (
                     <Fade in timeout={1400}>
                         <Box>
                             <Divider sx={{ my: 4, borderColor: "#e5e5e7" }} />
@@ -445,34 +327,15 @@ export default function SimulacaoComparativoDetalhado({ detalhado }: { detalhado
                             >
                                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 1 }}>
                                     <SavingsIcon sx={{ fontSize: 24 }} />
-                                    <Typography 
-                                        variant="h6" 
-                                        sx={{ 
-                                            fontWeight: 700,
-                                            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                        }}
-                                    >
-                                        Valor Reserva Sugerido
+                                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                        Reserva Sugerida para Equiparar Benefícios CLT
                                     </Typography>
                                 </Box>
-                                <Typography 
-                                    variant="h5" 
-                                    sx={{ 
-                                        fontWeight: 700,
-                                        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                        mb: 1,
-                                    }}
-                                >
-                                    {formatReal(detalhado.valorReservaSugerido)}
+                                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                                    {formatReal(parsedDetalhado.valorReservaSugerido)}
                                 </Typography>
-                                <Typography 
-                                    variant="caption" 
-                                    sx={{ 
-                                        opacity: 0.9,
-                                        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-                                    }}
-                                >
-                                    Recomendado para cobrir despesas emergenciais
+                                <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                                    Recomenda-se reservar este valor mensalmente para compensar os benefícios recebidos no regime CLT.
                                 </Typography>
                             </Box>
                         </Box>
